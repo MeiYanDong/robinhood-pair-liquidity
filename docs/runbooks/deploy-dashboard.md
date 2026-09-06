@@ -18,7 +18,7 @@
    不包含 `.env`、私钥、RPC URL、`node_modules`、执行中间态或未脱敏日志。
 2. 通过 Cloud Assistant 临时安装一次性 SSH 公钥。
 3. 上传发布包后运行 `dashboard/deploy/install-release.sh <release-dir>`。脚本会原子切换
-   `current` 软链接，并等待 `/readyz` 成功。
+   `current` 软链接，并最多等待 150 秒让新进程自产一次成功快照、通过 `/readyz`。
 
 ## 发布后验证
 
