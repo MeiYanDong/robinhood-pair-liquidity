@@ -1,6 +1,6 @@
 # PAIR/SPY 公开实时面板：生产部署
 
-最后核验：2026-09-06 19:49（Asia/Shanghai）
+最后核验：2026-09-06（Asia/Shanghai；精确运行时证据见部署读回）
 
 ## 公网入口
 
@@ -59,7 +59,8 @@ RPC 端点不出现在网页、API 响应或项目日志中。服务不加载任
 - Node.js 22：只监听 `127.0.0.1:8080`
 - systemd：`pair-liquidity-dashboard.service`，运行用户 `pairdash`
 - 程序：`/opt/pair-liquidity-dashboard/current`
-- 当前发布：`/opt/pair-liquidity-dashboard/releases/20260906T114837Z`
+- 当前发布：以服务器 `current` 软链接及同目录 `GIT_COMMIT` 的部署读回为准，避免文档中的
+  时间戳在下一次原子发布后变成伪实时状态。
 - 状态：`/var/lib/pair-liquidity-dashboard`
 - 环境：`/etc/pair-liquidity-dashboard.env`，权限 `0600 root:root`
 - 生产依赖：14 个，仅以 `viem` 为直接依赖；部署后 `npm audit --omit=dev` 为 0 项漏洞。
