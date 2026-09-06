@@ -1,0 +1,13 @@
+node_modules/
+runs/
+output/
+tmp/
+coverage/
+.playwright-cli/
+.DS_Store
+*.log
+*.pem
+*.key
+.env
+.env.*
+!.env.example

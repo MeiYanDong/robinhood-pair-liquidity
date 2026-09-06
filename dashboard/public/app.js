@@ -1,0 +1,881 @@
+const SVG_NS = 'http://www.w3.org/2000/svg'
+const state = {
+  window: '24h',
+  portfolioFilter: 'all',
+  data: null,
+  request: null,
+  poll: null,
+}
+
+const elements = {
+  statusPill: document.querySelector('#status-pill'),
+  blockLine: document.querySelector('#block-line'),
+  freshnessLine: document.querySelector('#freshness-line'),
+  pairPrice: document.querySelector('#pair-price'),
+  pairTick: document.querySelector('#pair-tick'),
+  activeShare: document.querySelector('#active-share'),
+  activeLps: document.querySelector('#active-lps'),
+  claimableFees: document.querySelector('#claimable-fees'),
+  feeTokens: document.querySelector('#fee-tokens'),
+  windowVolumeLabel: document.querySelector('#window-volume-label'),
+  windowVolume: document.querySelector('#window-volume'),
+  windowGrossFee: document.querySelector('#window-gross-fee'),
+  comparisonMethod: document.querySelector('#comparison-method'),
+  decisionPanel: document.querySelector('#decision-panel'),
+  decisionTitle: document.querySelector('#decision-title'),
+  decisionCopy: document.querySelector('#decision-copy'),
+  decisionGates: document.querySelector('#decision-gates'),
+  migrationCost: document.querySelector('#migration-cost'),
+  migrationDetail: document.querySelector('#migration-detail'),
+  comparisonWindowLabel: document.querySelector('#comparison-window-label'),
+  poolComparison: document.querySelector('#pool-comparison'),
+  comparisonNote: document.querySelector('#comparison-note'),
+  volumeTitle: document.querySelector('#volume-title'),
+  coverageNote: document.querySelector('#coverage-note'),
+  positionVerification: document.querySelector('#position-verification'),
+  positions: document.querySelector('#positions'),
+  portfolioBoundary: document.querySelector('#portfolio-boundary'),
+  portfolioNfts: document.querySelector('#portfolio-nfts'),
+  portfolioNftStatus: document.querySelector('#portfolio-nft-status'),
+  portfolioPrincipal: document.querySelector('#portfolio-principal'),
+  portfolioPrincipalAssets: document.querySelector('#portfolio-principal-assets'),
+  portfolioLifetimeFees: document.querySelector('#portfolio-lifetime-fees'),
+  portfolioFeeSplit: document.querySelector('#portfolio-fee-split'),
+  portfolioGas: document.querySelector('#portfolio-gas'),
+  portfolioGasUsd: document.querySelector('#portfolio-gas-usd'),
+  portfolioWallet: document.querySelector('#portfolio-wallet'),
+  portfolioWalletAssets: document.querySelector('#portfolio-wallet-assets'),
+  portfolioCapital: document.querySelector('#portfolio-capital'),
+  portfolioLineage: document.querySelector('#portfolio-lineage'),
+  portfolioAudit: document.querySelector('#portfolio-audit'),
+  portfolioPriceCoverage: document.querySelector('#portfolio-price-coverage'),
+  portfolioPriceLedger: document.querySelector('#portfolio-price-ledger'),
+  portfolioPositions: document.querySelector('#portfolio-positions'),
+  portfolioReceipts: document.querySelector('#portfolio-receipts'),
+  portfolioTransactions: document.querySelector('#portfolio-transactions'),
+  footerUpdate: document.querySelector('#footer-update'),
+  tooltip: document.querySelector('#chart-tooltip'),
+}
+
+function svg(name, attributes = {}, text = null) {
+  const node = document.createElementNS(SVG_NS, name)
+  for (const [key, value] of Object.entries(attributes)) node.setAttribute(key, String(value))
+  if (text != null) node.textContent = text
+  return node
+}
+
+function compact(value, digits = 1) {
+  if (!Number.isFinite(value)) return '—'
+  const absolute = Math.abs(value)
+  if (absolute >= 1e9) return `${(value / 1e9).toFixed(digits)}B`
+  if (absolute >= 1e6) return `${(value / 1e6).toFixed(digits)}M`
+  if (absolute >= 1e3) return `${(value / 1e3).toFixed(digits)}K`
+  return value.toLocaleString('en-US', { maximumFractionDigits: digits })
+}
+
+function tokenAmount(value) {
+  if (!Number.isFinite(value)) return '—'
+  if (Math.abs(value) >= 1000) return compact(value, 2)
+  if (Math.abs(value) >= 1) return value.toLocaleString('en-US', { maximumFractionDigits: 3 })
+  return value.toLocaleString('en-US', { maximumFractionDigits: 6 })
+}
+
+function money(value, digits = 0) {
+  if (!Number.isFinite(value)) return '—'
+  if (Math.abs(value) >= 1e6) return `$${compact(value, 2)}`
+  return value.toLocaleString('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    minimumFractionDigits: digits,
+    maximumFractionDigits: Math.max(digits, Math.abs(value) < 100 ? 2 : 0),
+  })
+}
+
+function price(value) {
+  if (!Number.isFinite(value)) return '—'
+  return `$${value.toLocaleString('en-US', { minimumFractionDigits: 6, maximumFractionDigits: 8 })}`
+}
+
+function numberOrNull(value) {
+  if (value == null || value === '') return null
+  const numeric = Number(value)
+  return Number.isFinite(numeric) ? numeric : null
+}
+
+function percent(value, digits = 1, signed = false) {
+  if (!Number.isFinite(value)) return '—'
+  const sign = signed && value > 0 ? '+' : ''
+  return `${sign}${value.toLocaleString('en-US', { maximumFractionDigits: digits })}%`
+}
+
+function localTime(value) {
+  if (!value) return '—'
+  return new Intl.DateTimeFormat('zh-CN', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).format(new Date(value))
+}
+
+function shortHash(value) {
+  if (!value || value.length < 14) return value || '—'
+  return `${value.slice(0, 8)}…${value.slice(-6)}`
+}
+
+function durationLabel(seconds) {
+  if (!Number.isFinite(seconds) || seconds < 0) return '时长 UNKNOWN'
+  if (seconds < 3_600) return `${Math.max(1, Math.round(seconds / 60))} 分钟`
+  if (seconds < 86_400) return `${(seconds / 3_600).toFixed(seconds < 36_000 ? 1 : 0)} 小时`
+  return `${(seconds / 86_400).toFixed(seconds < 864_000 ? 1 : 0)} 天`
+}
+
+function qualityBadge(level) {
+  const normalized = ['VERIFIED', 'DERIVED', 'PARTIAL', 'UNKNOWN'].includes(level) ? level : 'UNKNOWN'
+  return `<span class="quality-badge quality-${normalized.toLowerCase()}">${normalized}</span>`
+}
+
+function assetSummary(amounts = {}, { includeEth = false } = {}) {
+  const rows = []
+  if (includeEth && Number(amounts.eth)) rows.push(`${tokenAmount(Number(amounts.eth))} ETH`)
+  if (Number(amounts.spy)) rows.push(`${tokenAmount(Number(amounts.spy))} SPY`)
+  if (Number(amounts.pair)) rows.push(`${tokenAmount(Number(amounts.pair))} PAIR`)
+  if (Number(amounts.usdg)) rows.push(`${tokenAmount(Number(amounts.usdg))} USDG`)
+  if (Number(amounts.one)) rows.push(`${tokenAmount(Number(amounts.one))} $1`)
+  return rows.length ? rows.join(' · ') : '—'
+}
+
+function relativeAge(seconds) {
+  if (!Number.isFinite(seconds)) return '尚无快照'
+  if (seconds < 10) return '刚刚更新'
+  if (seconds < 60) return `${Math.floor(seconds)} 秒前更新`
+  return `${Math.floor(seconds / 60)} 分钟前更新`
+}
+
+function setStatus(runtime) {
+  const normalized = runtime.status
+  const className =
+    normalized === 'LIVE'
+      ? 'status-live'
+      : normalized === 'STALE'
+        ? 'status-stale'
+        : normalized === 'ERROR'
+          ? 'status-error'
+          : 'status-loading'
+  elements.statusPill.className = `status-pill ${className}`
+  elements.statusPill.querySelector('span').textContent = normalized
+  elements.freshnessLine.textContent = relativeAge(runtime.ageSeconds)
+}
+
+function linear(low, high, rangeLow, rangeHigh) {
+  const span = high - low || 1
+  return (value) => rangeLow + ((value - low) * (rangeHigh - rangeLow)) / span
+}
+
+function pointerTooltip(event, datum) {
+  elements.tooltip.hidden = false
+  elements.tooltip.innerHTML = [
+    `<strong>${price(datum.priceMidUsdg)}</strong>`,
+    `Tick ${datum.tickLower} – ${datum.tickUpper}`,
+    `成交 ${money(datum.volumeUsdg || 0)}`,
+    `全池费用估算 ${money(datum.grossFeeUsdg || 0, 2)}`,
+    `市场 L ${compact(Number(datum.marketLiquidity) / 1e22, 2)} ×10²²`,
+    `我方份额 ${(datum.ourSharePct || 0).toFixed(3)}%`,
+  ].join('<br>')
+  const left = Math.min(window.innerWidth - elements.tooltip.offsetWidth - 10, event.clientX + 13)
+  const top = Math.min(window.innerHeight - elements.tooltip.offsetHeight - 10, event.clientY + 13)
+  elements.tooltip.style.left = `${Math.max(8, left)}px`
+  elements.tooltip.style.top = `${Math.max(8, top)}px`
+}
+
+function hideTooltip() {
+  elements.tooltip.hidden = true
+}
+
+function drawChart(target, bins, options, data) {
+  const node = document.querySelector(target)
+  node.replaceChildren()
+  if (!bins.length) return
+
+  const width = 960
+  const height = options.small ? 278 : 316
+  const margin = { top: 18, right: 22, bottom: 48, left: 66 }
+  const plotWidth = width - margin.left - margin.right
+  const plotHeight = height - margin.top - margin.bottom
+  node.setAttribute('viewBox', `0 0 ${width} ${height}`)
+  node.setAttribute('preserveAspectRatio', 'none')
+
+  const xLow = Math.min(...bins.map((item) => item.priceLowUsdg))
+  const xHigh = Math.max(...bins.map((item) => item.priceHighUsdg))
+  const value = options.value
+  const values = bins.map(value)
+  const yMaxRaw = Math.max(...values, 0)
+  const yMax = yMaxRaw > 0 ? yMaxRaw * 1.12 : 1
+  const x = linear(xLow, xHigh, 0, plotWidth)
+  const y = linear(0, yMax, plotHeight, 0)
+  const plot = svg('g', { transform: `translate(${margin.left},${margin.top})` })
+  node.append(plot)
+
+  for (const position of data.positions.filter((item) => item.status === 'active')) {
+    const left = Math.max(0, x(position.priceLowUsdg))
+    const right = Math.min(plotWidth, x(position.priceHighUsdg))
+    if (right > left)
+      plot.append(svg('rect', { class: 'position-band', x: left, y: 0, width: right - left, height: plotHeight }))
+  }
+  const focusLeft = Math.max(0, x(data.focusBandUsdg.low))
+  const focusRight = Math.min(plotWidth, x(data.focusBandUsdg.high))
+  if (focusRight > focusLeft)
+    plot.append(
+      svg('rect', { class: 'focus-band', x: focusLeft, y: 0, width: focusRight - focusLeft, height: plotHeight }),
+    )
+
+  for (let index = 0; index <= 4; index += 1) {
+    const numeric = (yMax * index) / 4
+    const at = y(numeric)
+    plot.append(svg('line', { class: 'grid', x1: 0, x2: plotWidth, y1: at, y2: at }))
+    plot.append(svg('text', { class: 'axis', x: -10, y: at + 4, 'text-anchor': 'end' }, options.yFormat(numeric)))
+  }
+  for (let index = 0; index <= 5; index += 1) {
+    const numeric = xLow + ((xHigh - xLow) * index) / 5
+    const at = x(numeric)
+    plot.append(
+      svg(
+        'text',
+        {
+          class: 'axis',
+          x: at,
+          y: plotHeight + 24,
+          'text-anchor': index === 0 ? 'start' : index === 5 ? 'end' : 'middle',
+        },
+        `$${numeric.toFixed(4)}`,
+      ),
+    )
+  }
+  node.append(
+    svg(
+      'text',
+      {
+        class: 'axis-title',
+        x: margin.left + plotWidth / 2,
+        y: height - 7,
+        'text-anchor': 'middle',
+      },
+      'PAIR / USDG',
+    ),
+  )
+
+  if (options.kind === 'bar') {
+    const barWidth = Math.max(2, plotWidth / bins.length - 2)
+    for (const item of bins) {
+      const numeric = value(item)
+      plot.append(
+        svg('rect', {
+          x: x(item.priceMidUsdg) - barWidth / 2,
+          y: y(numeric),
+          width: barWidth,
+          height: Math.max(0, plotHeight - y(numeric)),
+          fill: options.color,
+          opacity: 0.78,
+        }),
+      )
+    }
+  } else {
+    const points = bins.map((item) => `${x(item.priceMidUsdg)},${y(value(item))}`).join(' ')
+    if (options.area) {
+      plot.append(
+        svg('polygon', {
+          points: `0,${plotHeight} ${points} ${plotWidth},${plotHeight}`,
+          fill: options.color,
+          opacity: 0.07,
+        }),
+      )
+    }
+    plot.append(
+      svg('polyline', {
+        points,
+        fill: 'none',
+        stroke: options.color,
+        'stroke-width': 2.2,
+        'vector-effect': 'non-scaling-stroke',
+      }),
+    )
+    if (options.secondary) {
+      const secondaryPoints = bins
+        .map((item) => `${x(item.priceMidUsdg)},${y(options.secondary.value(item))}`)
+        .join(' ')
+      plot.append(
+        svg('polyline', {
+          points: secondaryPoints,
+          fill: 'none',
+          stroke: options.secondary.color,
+          'stroke-width': 2,
+          'vector-effect': 'non-scaling-stroke',
+        }),
+      )
+    }
+  }
+
+  const currentX = x(data.pool.pairUsdg)
+  if (currentX >= 0 && currentX <= plotWidth) {
+    plot.append(svg('line', { class: 'current-line', x1: currentX, x2: currentX, y1: 0, y2: plotHeight }))
+    plot.append(svg('text', { class: 'current-label', x: currentX + 6, y: 11 }, 'NOW'))
+  }
+
+  const hitWidth = plotWidth / bins.length
+  for (const item of bins) {
+    const hit = svg('rect', {
+      class: 'hit',
+      x: x(item.priceMidUsdg) - hitWidth / 2,
+      y: 0,
+      width: Math.max(4, hitWidth),
+      height: plotHeight,
+    })
+    hit.addEventListener('pointermove', (event) => pointerTooltip(event, item))
+    hit.addEventListener('pointerleave', hideTooltip)
+    plot.append(hit)
+  }
+}
+
+function renderPositions(data) {
+  elements.positions.replaceChildren()
+  for (const item of [...data.positions, ...(data.directPositions || [])]) {
+    const card = document.createElement('article')
+    const isActive = item.status === 'active'
+    const isDirect = item.poolKind === 'direct'
+    card.className = `position-card ${item.inRange ? 'in-range' : 'out-range'}`
+    const status = !isActive ? item.status.toUpperCase() : item.inRange ? 'IN RANGE' : 'OUT OF RANGE'
+    card.innerHTML = `
+      <header>
+        <div><h3>${item.label}</h3><span class="token-id">NFT #${item.tokenId}</span></div>
+        <span class="range-status ${item.inRange ? 'in' : 'out'}">${status}</span>
+      </header>
+      <p class="position-range">${price(item.priceLowUsdg)}<br>→ ${price(item.priceHighUsdg)}</p>
+      <div class="position-stats">
+        <div><p>仓位现值</p><strong>${money(item.principal?.usdg || 0)}</strong></div>
+        <div><p>未领取费用</p><strong>${money(item.accruedFees?.usdg || 0, 2)}</strong></div>
+        <div><p>${isDirect ? 'USDG 本金' : 'SPY 本金'}</p><strong>${tokenAmount(isDirect ? item.principal?.usdgToken || 0 : item.principal?.spy || 0)}</strong></div>
+        <div><p>PAIR 本金</p><strong>${tokenAmount(item.principal?.pair || 0)}</strong></div>
+      </div>
+    `
+    elements.positions.append(card)
+  }
+}
+
+function statusLabel(status) {
+  const labels = {
+    active: 'ACTIVE',
+    empty: 'EMPTY',
+    owner_mismatch: 'OWNER CHANGED',
+    read_failed: 'READ FAILED',
+    unknown: 'UNKNOWN',
+  }
+  return labels[status] || String(status || 'UNKNOWN').toUpperCase()
+}
+
+function renderPriceLedger(portfolio, visiblePositions) {
+  const coverage = portfolio.accountingBoundary?.historicalPriceLedger || {}
+  const total = Number(coverage.total || portfolio.positions.length)
+  elements.portfolioPriceCoverage.textContent = [
+    `${coverage.entryMarket || 0}/${total} 入场市价`,
+    `${coverage.holdingTwap || 0}/${total} 持仓 TWAP`,
+    `${coverage.implicitExecution || 0}/${total} LP 净成交`,
+    `${coverage.closedExitAssets || 0}/${portfolio.totals.emptyNfts} 已撤仓资产`,
+  ].join(' · ')
+  elements.portfolioPriceLedger.replaceChildren()
+
+  const inventoryLabels = {
+    current_principal_same_safe_block: '安全区块当前本金',
+    exit_principal_fees_separated: '退出本金已拆费',
+    exit_gross_includes_unallocated_fees: '退出总额含未拆费用',
+    exit_assets_unknown: '退出资产缺失',
+  }
+
+  for (const position of visiblePositions) {
+    const ledger = position.priceLedger || {}
+    const entry = ledger.entry || {}
+    const holding = ledger.holding || {}
+    const endpoint = ledger.endpoint || {}
+    const execution = ledger.implicitExecution || {}
+    const result = ledger.markedResult || {}
+    const accounting = position.accounting || {}
+    const isPairPosition = ['pair-spy', 'pair-usdg'].includes(position.poolKind)
+
+    const entryValue = numberOrNull(entry.pairUsdg)
+    const entryCell = Number.isFinite(entryValue)
+      ? `<strong>${price(entryValue)}</strong><small>${entry.markedEvents}/${entry.totalEvents} 次加入有历史标价 · ${qualityBadge(entry.quality)}</small>`
+      : `<strong>${isPairPosition ? '价格待补' : '非 PAIR 仓'}</strong><small>${qualityBadge(entry.quality)} · ${entry.totalEvents || 0} 次加入</small>`
+
+    const holdingValue = numberOrNull(holding.pairUsdg)
+    const holdingCell = Number.isFinite(holdingValue)
+      ? `<strong>${price(holdingValue)}</strong><small>覆盖 ${percent(numberOrNull(holding.coveragePct), 1)} · ${durationLabel(numberOrNull(ledger.holdingSeconds))} · ${qualityBadge(holding.quality)}</small>`
+      : `<strong>${isPairPosition ? 'TWAP 待补' : '不适用'}</strong><small>${durationLabel(numberOrNull(ledger.holdingSeconds))} · ${qualityBadge(holding.quality)}</small>`
+
+    const endpointValue = numberOrNull(endpoint.pairUsdg)
+    const endpointLabel = endpoint.kind === 'EXIT' ? '退出时' : '当前'
+    const endpointCell = Number.isFinite(endpointValue)
+      ? `<strong>${price(endpointValue)}</strong><small>${endpointLabel} ${localTime(endpoint.at)} · ${qualityBadge(endpoint.quality)}</small>`
+      : `<strong>${isPairPosition ? `${endpointLabel}价格待补` : '不适用'}</strong><small>${localTime(endpoint.at)} · ${qualityBadge(endpoint.quality)}</small>`
+
+    const executionValue = numberOrNull(execution.pairUsdg)
+    let executionCell
+    if (Number.isFinite(executionValue)) {
+      const sideClass = execution.side === 'BUY' ? 'trade-buy' : 'trade-sell'
+      executionCell = `<strong class="${sideClass}">${execution.side} ${price(executionValue)}</strong><small>ΔPAIR ${execution.pairDelta > 0 ? '+' : ''}${tokenAmount(Number(execution.pairDelta))} · ${qualityBadge(execution.quality)}</small>`
+    } else if (execution.side === 'NONE') {
+      executionCell = `<strong>无净转换</strong><small>两侧数量未形成可比成交 · ${qualityBadge(execution.quality)}</small>`
+    } else {
+      executionCell = `<strong>${isPairPosition ? '成交价待补' : '不适用'}</strong><small>${qualityBadge(execution.quality)}</small>`
+    }
+
+    const feeAdjusted = numberOrNull(execution.feeAdjustedPairUsdg)
+    const markedPnl = numberOrNull(result.pnlUsdg)
+    let resultCell
+    if (position.status === 'active') {
+      const breakEven = numberOrNull(accounting.pairBreakEvenAfterFeesUsdg)
+      const versusHodl = numberOrNull(accounting.versusSuppliedHodlUsdg)
+      resultCell = Number.isFinite(breakEven)
+        ? breakEven <= 0
+          ? `<strong>成本已覆盖</strong><small>非 PAIR 本金 + 已记录手续费已覆盖入场成本${Number.isFinite(versusHodl) ? ` · vs 原币 ${money(versusHodl, 2)}` : ''}</small>`
+          : `<strong>${price(breakEven)}</strong><small>PAIR 手续费后回本${Number.isFinite(versusHodl) ? ` · vs 原币 ${money(versusHodl, 2)}` : ''}</small>`
+        : `<strong>回本价待补</strong><small>当前仓仍按安全区块追踪</small>`
+    } else if (Number.isFinite(markedPnl)) {
+      resultCell = `<strong class="${markedPnl >= 0 ? 'positive' : 'negative'}">${money(markedPnl, 2)}</strong><small>退出时 NFT 局部结果 ${percent(numberOrNull(result.pnlPct), 2, true)} · ${qualityBadge(result.quality)}${Number.isFinite(feeAdjusted) ? `<br>费用后 ${execution.side} ${price(feeAdjusted)} · ${qualityBadge(execution.feeAdjustedQuality)}` : ''}</small>`
+    } else if (Number.isFinite(feeAdjusted)) {
+      resultCell = `<strong>${price(feeAdjusted)}</strong><small>记录费用后 ${execution.side} · ${qualityBadge(execution.feeAdjustedQuality)}</small>`
+    } else {
+      resultCell = `<strong>结果未闭合</strong><small>不以现价冒充历史成本</small>`
+    }
+
+    const row = document.createElement('article')
+    row.className = `price-ledger-row status-${position.status}`
+    row.setAttribute('role', 'row')
+    row.innerHTML = `
+      <div class="price-ledger-identity" role="cell">
+        <i></i>
+        <div><strong>${position.label}</strong><small>#${position.tokenId} · ${position.poolLabel}</small></div>
+      </div>
+      <div class="price-ledger-cell" role="cell">${entryCell}</div>
+      <div class="price-ledger-cell" role="cell">${holdingCell}</div>
+      <div class="price-ledger-cell" role="cell">${endpointCell}</div>
+      <div class="price-ledger-cell" role="cell">${executionCell}</div>
+      <div class="price-ledger-cell price-ledger-result" role="cell">${resultCell}</div>
+      <div class="price-ledger-cell price-ledger-evidence" role="cell">
+        ${qualityBadge(ledger.overallQuality)}
+        <small>${inventoryLabels[ledger.inventory?.source] || '证据路径待核对'}</small>
+      </div>
+    `
+    elements.portfolioPriceLedger.append(row)
+  }
+}
+
+function renderPortfolio(data) {
+  const portfolio = data.portfolio
+  if (!portfolio) return
+  const totals = portfolio.totals
+  elements.portfolioBoundary.textContent = `CAPITAL · ${portfolio.accountingBoundary.aggregateCashInvested}`
+  elements.portfolioBoundary.className = `boundary-pill boundary-${portfolio.accountingBoundary.aggregateCashInvested.toLowerCase()}`
+  elements.portfolioNfts.textContent = totals.lifecycleNfts.toLocaleString('en-US')
+  elements.portfolioNftStatus.textContent = `${totals.activeNfts} 活跃 · ${totals.emptyNfts} 已撤空 · ${totals.exceptionNfts} 异常`
+  elements.portfolioPrincipal.textContent = money(totals.activePrincipalUsdg, 2)
+  elements.portfolioPrincipalAssets.textContent = assetSummary(totals.activePrincipal)
+  elements.portfolioLifetimeFees.textContent = money(totals.recordedLifetimeFeesCurrentMarkUsdg, 2)
+  elements.portfolioFeeSplit.textContent = `已领 ${money(totals.recordedClaimedFeesCurrentMarkUsdg, 2)} · 未领 ${money(totals.unclaimedFeesUsdg, 2)}`
+  elements.portfolioGas.textContent = `${totals.gasEth.toFixed(5)} ETH`
+  elements.portfolioGasUsd.textContent =
+    totals.gasUsdgCurrentMark == null
+      ? `${totals.confirmedReceipts} 成功 · ${totals.revertedReceipts} 回滚`
+      : `${money(totals.gasUsdgCurrentMark, 2)} 当前换算 · ${totals.revertedReceipts} 回滚`
+  elements.portfolioWallet.textContent = money(totals.walletBalancesUsdg, 2)
+  elements.portfolioWalletAssets.textContent = assetSummary(totals.walletBalances, { includeEth: true })
+  elements.portfolioCapital.textContent = `${totals.lpDirectedEthObserved.toFixed(4)} ETH`
+
+  const byId = new Map(portfolio.positions.map((position) => [String(position.tokenId), position]))
+  elements.portfolioLineage.replaceChildren()
+  for (const edge of portfolio.lineages) {
+    const row = document.createElement('div')
+    const from = byId.get(String(edge.from))
+    const to = byId.get(String(edge.to))
+    row.className = `lineage-row lineage-${edge.type}`
+    row.innerHTML = `
+      <span class="lineage-node"><b>${from?.label || edge.from}</b><small>#${edge.from}</small></span>
+      <span class="lineage-arrow"><i></i><em>${edge.type.replaceAll('_', ' ')}</em></span>
+      <span class="lineage-node"><b>${to?.label || edge.to}</b><small>#${edge.to}</small></span>
+    `
+    row.title = edge.label
+    elements.portfolioLineage.append(row)
+  }
+
+  const auditRows = [
+    {
+      label: 'NFT 清单',
+      value: `${portfolio.audit?.chainIds?.length || 0}/${portfolio.audit?.localIds?.length || 0}`,
+      detail: portfolio.audit?.inventoryStatus || 'UNKNOWN',
+      level: portfolio.accountingBoundary.chainInventory.startsWith('verified') ? 'verified' : 'partial',
+    },
+    {
+      label: '交易回执',
+      value: `${totals.confirmedReceipts + totals.revertedReceipts}`,
+      detail: `${totals.confirmedReceipts} SUCCESS · ${totals.revertedReceipts} REVERTED`,
+      level: 'verified',
+    },
+    {
+      label: '活跃仓估值',
+      value: portfolio.accountingBoundary.activeValuation.toUpperCase(),
+      detail: `同一安全区块 #${Number(portfolio.asOfBlock).toLocaleString('en-US')}`,
+      level: portfolio.accountingBoundary.activeValuation,
+    },
+    {
+      label: '累计手续费',
+      value: 'PARTIAL',
+      detail: '已记录领取 + 当前未领取；部分撤仓内含费用无法拆分',
+      level: 'partial',
+    },
+    {
+      label: '历史价格账本',
+      value: `${portfolio.accountingBoundary.historicalPriceLedger?.holdingTwap || 0}/${totals.lifecycleNfts}`,
+      detail: `${portfolio.accountingBoundary.historicalPriceLedger?.closedExitAssets || 0}/${totals.emptyNfts} 个已撤仓资产可追溯`,
+      level: (portfolio.accountingBoundary.historicalPriceLedger?.holdingTwap || 0) > 0 ? 'verified' : 'partial',
+    },
+    {
+      label: '外部总投入',
+      value: 'PARTIAL',
+      detail: '原生 ETH 外部转入与既有代币批次尚未完全归因',
+      level: 'partial',
+    },
+  ]
+  elements.portfolioAudit.replaceChildren()
+  for (const item of auditRows) {
+    const row = document.createElement('div')
+    row.className = `audit-row audit-${item.level}`
+    row.innerHTML = `<span>${item.label}</span><strong>${item.value}</strong><small>${item.detail}</small>`
+    elements.portfolioAudit.append(row)
+  }
+
+  const visible = portfolio.positions.filter(
+    (position) => state.portfolioFilter === 'all' || position.status === state.portfolioFilter,
+  )
+  renderPriceLedger(portfolio, visible)
+  elements.portfolioPositions.replaceChildren()
+  for (const position of visible) {
+    const row = document.createElement('article')
+    const accounting = position.accounting
+    const range = position.currentRange || {}
+    const lifecycleEnd = position.exit?.at
+      ? localTime(position.exit.at)
+      : position.status === 'active'
+        ? '至今'
+        : '撤出时间 UNKNOWN'
+    const localDelta = accounting.versusSuppliedHodlUsdg
+    const localResult = Number.isFinite(localDelta)
+      ? `<strong class="${localDelta >= 0 ? 'positive' : 'negative'}">${money(localDelta, 2)}</strong><small>vs 原币 ${percent(accounting.versusSuppliedHodlPct, 2, true)}</small>`
+      : position.status === 'empty'
+        ? `<strong>已撤空</strong><small>退出资产按血缘继续追踪</small>`
+        : `<strong>口径未闭合</strong><small>禁止跨 NFT 汇总</small>`
+    const breakEven = accounting.pairBreakEvenAfterFeesUsdg
+    const pairBasis = accounting.impliedPairBuyPriceUsdg
+    const basisLine =
+      position.status === 'empty'
+        ? position.exit?.transactionHash
+          ? '退出已核验 · 去向见资金血缘'
+          : '退出交易 UNKNOWN · 仅证实流动性为 0'
+        : Number.isFinite(breakEven)
+          ? breakEven <= 0
+            ? 'PAIR 成本已由非 PAIR 本金与手续费覆盖'
+            : `PAIR 回本 ${price(breakEven)}`
+          : Number.isFinite(pairBasis)
+            ? `区间内隐含买入 ${price(pairBasis)}`
+            : 'PAIR 成本口径不闭合'
+    row.className = `portfolio-row status-${position.status}`
+    row.setAttribute('role', 'row')
+    row.innerHTML = `
+      <div class="portfolio-position-id" role="cell">
+        <i></i>
+        <div><strong>${position.label}</strong><small>#${position.tokenId} · ${position.poolLabel}</small></div>
+        <span>${statusLabel(position.status)}</span>
+      </div>
+      <div class="portfolio-cell" role="cell">
+        <strong>${localTime(position.mint?.at)} → ${lifecycleEnd}</strong>
+        <small>${position.supplyEvents.length} 次加入 · ${position.claims.length} 次费用记录</small>
+      </div>
+      <div class="portfolio-cell" role="cell">
+        <strong>${price(Number(range.low))} – ${price(Number(range.high))}</strong>
+        <small>Tick ${position.tickLower.toLocaleString('en-US')} → ${position.tickUpper.toLocaleString('en-US')}</small>
+      </div>
+      <div class="portfolio-cell" role="cell">
+        <strong>${money(accounting.currentPrincipalUsdg, 2)} / ${money(accounting.currentUnclaimedUsdg, 2)}</strong>
+        <small>${assetSummary(position.principal)}</small>
+      </div>
+      <div class="portfolio-cell" role="cell">
+        <strong>${money(accounting.claimedCurrentMarkUsdg, 2)}</strong>
+        <small>按现价重估 · 非闲置余额</small>
+      </div>
+      <div class="portfolio-cell portfolio-local-result" role="cell">
+        ${localResult}
+        <small>${basisLine}</small>
+      </div>
+    `
+    elements.portfolioPositions.append(row)
+  }
+
+  document.querySelectorAll('[data-portfolio-filter]').forEach((button) => {
+    button.setAttribute('aria-selected', String(button.dataset.portfolioFilter === state.portfolioFilter))
+  })
+
+  elements.portfolioReceipts.textContent = `${totals.confirmedReceipts} 成功 · ${totals.revertedReceipts} 回滚 · 按交易哈希去重`
+  elements.portfolioTransactions.replaceChildren()
+  for (const transaction of [...portfolio.transactions].reverse()) {
+    const row = document.createElement('article')
+    const explorer = portfolio.explorerTxBaseUrl ? `${portfolio.explorerTxBaseUrl}${transaction.hash}` : null
+    const gasEth = Number(transaction.gasCostWei || 0) / 1e18
+    row.className = `transaction-row tx-${transaction.status}`
+    row.innerHTML = `
+      <div><strong>${localTime(transaction.at)}</strong><small>Block ${Number(transaction.blockNumber).toLocaleString('en-US')}</small></div>
+      <div><strong>${transaction.label}</strong><small>${transaction.action.replaceAll('_', ' ')}</small></div>
+      <div><span>${transaction.status.toUpperCase()}</span></div>
+      <div><strong>${gasEth < 0.0001 ? '<0.00010' : gasEth.toFixed(5)} ETH</strong></div>
+      <div>${explorer ? `<a href="${explorer}" target="_blank" rel="noreferrer">${shortHash(transaction.hash)} ↗</a>` : shortHash(transaction.hash)}</div>
+    `
+    elements.portfolioTransactions.append(row)
+  }
+}
+
+function renderComparison(data) {
+  const comparison = data.comparison
+  if (!comparison) return
+  const baseline = comparison.rows.find((row) => row.kind === 'current')
+  const selectedMetric = baseline?.windows?.[data.selectedWindow]
+  elements.comparisonMethod.textContent = `安全区块 #${Number(comparison.asOfBlock).toLocaleString('en-US')} · 对照本金 ${money(comparison.capitalUsdg, 2)}`
+  elements.comparisonWindowLabel.textContent = `${selectedMetric?.label || data.selectedWindow}成交`
+  elements.poolComparison.replaceChildren()
+
+  for (const row of comparison.rows) {
+    const metric = row.windows[data.selectedWindow]
+    if (!metric) continue
+    const article = document.createElement('article')
+    const leadClass = metric.relativeLeadPct > 0 ? 'positive' : metric.relativeLeadPct < 0 ? 'negative' : ''
+    article.className = `comparison-row ${row.kind === 'current' ? 'is-current' : ''}`
+    article.setAttribute('role', 'row')
+    article.innerHTML = `
+      <div class="pool-identity" role="cell">
+        <span class="pool-marker"></span>
+        <div>
+          <strong>${row.label}</strong>
+          <p>${row.feeLabel} fee · ${row.kind === 'current' ? '当前实仓' : row.actualTotals?.activePositions ? `实仓 ${row.actualTotals.activePositions} 个 · 对照模型` : '候选模拟仓'}</p>
+        </div>
+        <span class="coverage-tag ${metric.partialBeforeAnchor ? 'partial' : 'complete'}">${metric.partialBeforeAnchor ? 'PARTIAL' : 'FULL'}</span>
+      </div>
+      <div class="comparison-cell" role="cell">
+        <strong>${money(metric.volumeUsdg)}</strong>
+        <span>${metric.swapEvents.toLocaleString('en-US')} swaps</span>
+      </div>
+      <div class="comparison-cell" role="cell">
+        <strong>${money(metric.estimatedFeeUsdg, 2)}</strong>
+        <span>${money(metric.hourlyFeeUsdg, 2)} / h</span>
+      </div>
+      <div class="comparison-cell" role="cell">
+        <strong>${percent(metric.dailyRatePct, 2)}</strong>
+        <span>窗口毛费率年化 ${percent(metric.annualizedGrossPct, 0)}</span>
+      </div>
+      <div class="comparison-cell comparison-lead ${leadClass}" role="cell">
+        <strong>${row.kind === 'current' ? 'BASE' : percent(metric.relativeLeadPct, 1, true)}</strong>
+        <span>${row.activeRangeCount} 个映射区间生效</span>
+      </div>
+    `
+    elements.poolComparison.append(article)
+  }
+
+  const decision = comparison.decision
+  const best = decision.bestCandidate
+  const copyBySignal = {
+    BUILDING_EVIDENCE: {
+      className: 'decision-building',
+      title: '继续积累证据',
+      copy: '至少一个确认窗口尚未完整，主 LP 保持不动。',
+    },
+    HOLD_SPY: {
+      className: 'decision-hold',
+      title: '保持 SPY / PAIR',
+      copy: '候选池尚未同时通过持续领先与成本回收门槛。',
+    },
+    TEST_ELIGIBLE: {
+      className: 'decision-ready',
+      title: `允许 ${comparison.policy.testCapitalPct}% 小仓测试`,
+      copy: `${best?.label || '候选池'} 已通过数据门槛；仍需单独做交易预检后才能执行。`,
+    },
+  }
+  const view = copyBySignal[decision.signal] || copyBySignal.BUILDING_EVIDENCE
+  elements.decisionPanel.className = `decision-panel ${view.className}`
+  elements.decisionTitle.textContent = view.title
+  elements.decisionCopy.textContent = view.copy
+  elements.decisionGates.replaceChildren()
+  for (const gate of best?.gates || []) {
+    const item = document.createElement('span')
+    const stateClass = !gate.coverageComplete ? 'gate-wait' : gate.pass ? 'gate-pass' : 'gate-fail'
+    item.className = `decision-gate ${stateClass}`
+    item.textContent = `${gate.label} ${gate.leadPct == null ? '等待' : percent(gate.leadPct, 0, true)}`
+    elements.decisionGates.append(item)
+  }
+  if (best) {
+    const costGate = document.createElement('span')
+    costGate.className = `decision-gate ${best.breakEvenHours == null ? 'gate-wait' : best.costPass ? 'gate-pass' : 'gate-fail'}`
+    costGate.textContent = `回本 ${best.breakEvenHours == null ? '待定' : `${best.breakEvenHours.toFixed(1)}h`}`
+    elements.decisionGates.append(costGate)
+  }
+
+  const migration = comparison.migrationEstimate
+  elements.migrationCost.textContent = migration.totalUsdg == null ? 'UNKNOWN' : money(migration.totalUsdg, 2)
+  elements.migrationDetail.textContent =
+    migration.totalUsdg == null
+      ? 'ETH 报价不可用 · 必须交易前预检'
+      : `Gas ${money(migration.gasCostUsdg, 2)} + 路由缓冲 ${money(migration.swapFrictionUsdg, 2)}`
+  elements.comparisonNote.textContent = `${selectedMetric?.label || data.selectedWindow}短窗外推；候选池按当前流动性与我们现有美元区间静态映射。不是交易模拟，也未计无常损失与资产机会成本。`
+}
+
+function render(data) {
+  state.data = data
+  setStatus(data.runtime)
+  elements.blockLine.textContent = `BLOCK ${Number(data.pool.blockNumber).toLocaleString('en-US')} · ${localTime(data.pool.blockTime)}`
+  elements.pairPrice.textContent = price(data.pool.pairUsdg)
+  elements.pairTick.textContent = `SPY ${money(data.pool.spyUsdg)} · Tick ${data.pool.currentTick.toLocaleString('en-US')}`
+  elements.activeShare.textContent = `${data.pool.ourActiveSharePct.toFixed(3)}%`
+  const inRange = data.positions.filter((item) => item.status === 'active' && item.inRange).length
+  const directPositions = (data.directPositions || []).filter((item) => item.status === 'active')
+  const directInRange = directPositions.filter((item) => item.inRange).length
+  elements.activeLps.textContent = directPositions.length
+    ? `SPY ${inRange}/${data.totals.activePositions} · USDG ${directInRange}/${directPositions.length}`
+    : `${inRange} / ${data.totals.activePositions} 个区间生效`
+  const directFees = directPositions.reduce(
+    (total, item) => ({
+      value: total.value + (item.accruedFees?.usdg || 0),
+      usdg: total.usdg + (item.accruedFees?.usdgToken || 0),
+      pair: total.pair + (item.accruedFees?.pair || 0),
+    }),
+    { value: 0, usdg: 0, pair: 0 },
+  )
+  elements.claimableFees.textContent = money(data.totals.accruedFees.usdg + directFees.value, 2)
+  elements.feeTokens.textContent = `SPY ${tokenAmount(data.totals.accruedFees.spy)} · USDG ${tokenAmount(directFees.usdg)} · PAIR ${tokenAmount(data.totals.accruedFees.pair + directFees.pair)}`
+  elements.windowVolumeLabel.textContent = `${data.analytics.label}成交`
+  elements.windowVolume.textContent = money(data.analytics.totals.volumeUsdg)
+  elements.windowGrossFee.textContent = `全池费用估算 ${money(data.analytics.totals.grossFeeUsdg, 2)}`
+  elements.volumeTitle.textContent = `${data.analytics.label}单边成交量`
+  elements.coverageNote.textContent = data.analytics.partialBeforeAnchor
+    ? `历史仅覆盖 ${localTime(data.history.anchorTime)} 之后`
+    : `共 ${data.analytics.swapEvents.toLocaleString('en-US')} 笔 Swap · 按成交时 SPY 估值`
+  elements.positionVerification.textContent =
+    data.dataQuality.positionVerification === 'verified'
+      ? '✓ NFT owner / liquidity 已在同一区块核验'
+      : '△ 仓位核验不完整，请查看数据源'
+  elements.positionVerification.className = `verification ${data.dataQuality.positionVerification}`
+  elements.footerUpdate.textContent = `最后有效快照 ${localTime(data.generatedAt)}`
+  renderComparison(data)
+  renderPortfolio(data)
+
+  document.querySelectorAll('[data-window]').forEach((button) => {
+    button.setAttribute('aria-selected', String(button.dataset.window === data.selectedWindow))
+  })
+
+  const bins = data.analytics.bins
+  drawChart(
+    '#liquidity-chart',
+    bins,
+    {
+      value: (item) => Number(item.marketLiquidity) / 1e22,
+      secondary: { value: (item) => Number(item.ourLiquidity) / 1e22, color: 'var(--cyan)' },
+      yFormat: (value) => value.toFixed(1),
+      color: 'var(--acid)',
+      area: true,
+    },
+    data,
+  )
+  drawChart(
+    '#volume-chart',
+    bins,
+    {
+      value: (item) => item.volumeUsdg,
+      yFormat: (value) => compact(value, 1),
+      color: 'var(--orange)',
+      kind: 'bar',
+    },
+    data,
+  )
+  drawChart(
+    '#efficiency-chart',
+    bins,
+    {
+      value: (item) => item.feeUsdgPer1e20Liquidity,
+      yFormat: (value) => compact(value, 1),
+      color: 'var(--orange)',
+      area: true,
+      small: true,
+    },
+    data,
+  )
+  drawChart(
+    '#share-chart',
+    bins,
+    {
+      value: (item) => item.ourSharePct,
+      yFormat: (value) => `${value.toFixed(1)}%`,
+      color: 'var(--cyan)',
+      area: true,
+      small: true,
+    },
+    data,
+  )
+  renderPositions(data)
+}
+
+async function load() {
+  if (state.request) return state.request
+  const requestedWindow = state.window
+  const request = (async () => {
+    try {
+      const response = await fetch(`/api/snapshot?window=${encodeURIComponent(requestedWindow)}`, { cache: 'no-store' })
+      const payload = await response.json()
+      if (!response.ok)
+        throw new Error(payload.runtime?.progress?.message || payload.status || `HTTP ${response.status}`)
+      render(payload)
+    } catch (error) {
+      const runtime = state.data?.runtime || { status: 'ERROR', ageSeconds: null }
+      setStatus({ ...runtime, status: 'ERROR' })
+      elements.freshnessLine.textContent = error.message
+    }
+  })()
+  state.request = request
+  try {
+    return await request
+  } finally {
+    if (state.request === request) state.request = null
+    if (state.window !== requestedWindow) void load()
+  }
+}
+
+document.querySelector('#window-tabs').addEventListener('click', (event) => {
+  const button = event.target.closest('button[data-window]')
+  if (!button || button.dataset.window === state.window) return
+  state.window = button.dataset.window
+  document.querySelectorAll('[data-window]').forEach((item) => {
+    item.setAttribute('aria-selected', String(item === button))
+  })
+  void load()
+})
+
+document.querySelector('#portfolio-tabs').addEventListener('click', (event) => {
+  const button = event.target.closest('button[data-portfolio-filter]')
+  if (!button || button.dataset.portfolioFilter === state.portfolioFilter) return
+  state.portfolioFilter = button.dataset.portfolioFilter
+  if (state.data) renderPortfolio(state.data)
+})
+
+window.addEventListener(
+  'resize',
+  () => {
+    if (state.data) render(state.data)
+  },
+  { passive: true },
+)
+
+void load()
+state.poll = window.setInterval(() => void load(), 5_000)

@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --ignore-scripts --no-audit --no-fund
+      - run: npm run check
+      - run: npm run security:audit:dashboard
+
+  dashboard-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache-dependency-path: dashboard/package-lock.json
+          cache: npm
+      - working-directory: dashboard
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Start dashboard from committed audited snapshot
+        run: |
+          mkdir -p runs/pair-dashboard
+          cp dashboard/config/lp-portfolio-ledger.json runs/pair-dashboard/latest.json
+          PAIR_DASHBOARD_PORT=8080 node dashboard/server.mjs > /tmp/pair-dashboard.log 2>&1 &
+          echo $! > /tmp/pair-dashboard.pid
+      - name: Verify process liveness and static UI
+        run: |
+          for attempt in $(seq 1 20); do
+            curl --fail --silent http://127.0.0.1:8080/livez && break
+            sleep 1
+          done
+          curl --fail --silent http://127.0.0.1:8080/ >/dev/null
+      - if: always()
+        run: |
+          test ! -f /tmp/pair-dashboard.log || cat /tmp/pair-dashboard.log
+          test ! -f /tmp/pair-dashboard.pid || kill "$(cat /tmp/pair-dashboard.pid)" 2>/dev/null || true

@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#0b0d0c" />
+    <title>PAIR / SPY — Live Liquidity Field</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/styles.css?v=fa611260" />
+  </head>
+  <body>
+    <div class="noise" aria-hidden="true"></div>
+    <main class="shell">
+      <header class="masthead reveal">
+        <div>
+          <p class="eyebrow">Robinhood Chain · Uniswap v4 · Public read-only monitor</p>
+          <h1>PAIR <span>/</span> SPY</h1>
+          <p class="subtitle">Live Liquidity Field</p>
+        </div>
+        <div class="live-block" aria-live="polite">
+          <div id="status-pill" class="status-pill status-loading"><i></i><span>CONNECTING</span></div>
+          <p id="block-line">等待安全区块</p>
+          <p id="freshness-line">正在连接 Robinhood Chain</p>
+        </div>
+      </header>
+
+      <section class="metric-grid reveal" aria-label="核心指标">
+        <article class="metric metric-price">
+          <p>PAIR / USDG</p>
+          <strong id="pair-price">—</strong>
+          <small id="pair-tick">Tick —</small>
+        </article>
+        <article class="metric">
+          <p>当前活跃份额</p>
+          <strong id="active-share">—</strong>
+          <small id="active-lps">— 个区间生效</small>
+        </article>
+        <article class="metric">
+          <p>未领取手续费</p>
+          <strong id="claimable-fees">—</strong>
+          <small id="fee-tokens">SPY — · PAIR —</small>
+        </article>
+        <article class="metric">
+          <p id="window-volume-label">24 小时成交</p>
+          <strong id="window-volume">—</strong>
+          <small id="window-gross-fee">全池费用估算 —</small>
+        </article>
+      </section>
+
+      <section id="portfolio" class="portfolio-section reveal" aria-labelledby="portfolio-title">
+        <header class="portfolio-header">
+          <div>
+            <p class="section-kicker">Wallet-wide LP control room</p>
+            <h2 id="portfolio-title">全生命周期总账</h2>
+          </div>
+          <div id="portfolio-boundary" class="boundary-pill boundary-partial">CAPITAL · PARTIAL</div>
+        </header>
+
+        <div class="portfolio-metric-grid" aria-label="LP 生命周期指标">
+          <article class="portfolio-metric accent-acid">
+            <p>历史 NFT</p>
+            <strong id="portfolio-nfts">—</strong>
+            <small id="portfolio-nft-status">等待完整清单</small>
+          </article>
+          <article class="portfolio-metric accent-cyan">
+            <p>当前 LP 本金</p>
+            <strong id="portfolio-principal">—</strong>
+            <small id="portfolio-principal-assets">等待安全区块估值</small>
+          </article>
+          <article class="portfolio-metric accent-orange">
+            <p>已记录累计手续费</p>
+            <strong id="portfolio-lifetime-fees">—</strong>
+            <small id="portfolio-fee-split">领取与未领取分开核算</small>
+          </article>
+          <article class="portfolio-metric accent-red">
+            <p>链上操作 Gas</p>
+            <strong id="portfolio-gas">—</strong>
+            <small id="portfolio-gas-usd">按当前 ETH 价格换算</small>
+          </article>
+          <article class="portfolio-metric">
+            <p>钱包闲置资产</p>
+            <strong id="portfolio-wallet">—</strong>
+            <small id="portfolio-wallet-assets">ETH 保留金与代币残余</small>
+          </article>
+          <article class="portfolio-metric">
+            <p>已观察 LP 定向 ETH</p>
+            <strong id="portfolio-capital">—</strong>
+            <small>不是完整总投入 · 外部转入仍待闭合</small>
+          </article>
+        </div>
+
+        <div class="portfolio-insight-grid">
+          <article class="lineage-panel">
+            <header>
+              <div>
+                <p class="section-index">A</p>
+                <h3>资金血缘</h3>
+              </div>
+              <p>迁移与手续费复投不重复记作新投入</p>
+            </header>
+            <div id="portfolio-lineage" class="lineage-list"></div>
+          </article>
+          <article class="audit-panel">
+            <header>
+              <div>
+                <p class="section-index">B</p>
+                <h3>证据覆盖</h3>
+              </div>
+            </header>
+            <div id="portfolio-audit" class="audit-list"></div>
+          </article>
+        </div>
+
+        <section class="price-ledger-panel" aria-labelledby="price-ledger-title">
+          <header>
+            <div>
+              <p class="section-index">C</p>
+              <div>
+                <p class="price-ledger-eyebrow">Price memory / event-to-event</p>
+                <h3 id="price-ledger-title">历史价格账本</h3>
+              </div>
+            </div>
+            <div class="evidence-legend" aria-label="价格账本证据等级">
+              <span class="quality-badge quality-verified">VERIFIED</span>
+              <span class="quality-badge quality-derived">DERIVED</span>
+              <span class="quality-badge quality-partial">PARTIAL</span>
+              <span class="quality-badge quality-unknown">UNKNOWN</span>
+            </div>
+          </header>
+          <div id="portfolio-price-coverage" class="price-ledger-coverage">正在重建历史价格路径</div>
+          <div class="price-ledger-table-wrap">
+            <div class="price-ledger-table-head" aria-hidden="true">
+              <span>NFT / 池子</span>
+              <span>入场市价<br />资金加权</span>
+              <span>持仓期均价<br />时间加权</span>
+              <span>当前 / 退出<br />市场价</span>
+              <span>LP 净成交<br />费用剔除</span>
+              <span>手续费后 / 局部结果</span>
+              <span>证据</span>
+            </div>
+            <div id="portfolio-price-ledger" class="price-ledger-table" role="table" aria-label="LP 历史价格账本"></div>
+          </div>
+          <p class="portfolio-footnote">
+            入场市价、持仓期 TWAP 与 LP
+            隐含成交价回答的是三个不同问题；迁移子仓继续沿资金血缘追踪，不把重复资本算成新投入。
+          </p>
+        </section>
+
+        <section class="portfolio-table-panel" aria-labelledby="all-positions-title">
+          <header>
+            <div>
+              <p class="section-index">D</p>
+              <h3 id="all-positions-title">全部 LP · 含已撤仓</h3>
+            </div>
+            <div id="portfolio-tabs" class="portfolio-tabs" role="tablist" aria-label="筛选生命周期仓位">
+              <button type="button" data-portfolio-filter="all" aria-selected="true">全部</button>
+              <button type="button" data-portfolio-filter="active">活跃</button>
+              <button type="button" data-portfolio-filter="empty">已撤空</button>
+            </div>
+          </header>
+          <div class="portfolio-table-wrap">
+            <div class="portfolio-table-head" aria-hidden="true">
+              <span>NFT / 池子</span>
+              <span>生命周期</span>
+              <span>价格区间</span>
+              <span>当前本金 / 未领</span>
+              <span>累计已领</span>
+              <span>NFT 局部账</span>
+            </div>
+            <div id="portfolio-positions" class="portfolio-table" role="table" aria-label="全部 LP 生命周期"></div>
+          </div>
+          <p class="portfolio-footnote">
+            NFT 局部账用于看单仓路径；迁移子仓和手续费子仓复用了上游资金，因此禁止把各 NFT 入场价值直接相加。
+          </p>
+        </section>
+
+        <details class="transaction-ledger">
+          <summary>
+            <span><b>操作回执总账</b><small id="portfolio-receipts">—</small></span>
+            <span>展开全部交易 ↘</span>
+          </summary>
+          <div class="transaction-table-wrap">
+            <div class="transaction-table-head" aria-hidden="true">
+              <span>时间 / 区块</span><span>动作</span><span>状态</span><span>Gas</span><span>回执</span>
+            </div>
+            <div id="portfolio-transactions" class="transaction-table"></div>
+          </div>
+        </details>
+      </section>
+
+      <section class="comparison-section reveal" aria-labelledby="comparison-title">
+        <header class="comparison-header">
+          <div>
+            <p class="section-kicker">Route decision desk</p>
+            <h2 id="comparison-title">同本金 · 同区间 · 三池对照</h2>
+          </div>
+          <p id="comparison-method" class="comparison-method">读取链上成交与当前流动性</p>
+        </header>
+
+        <div id="decision-panel" class="decision-panel decision-building" aria-live="polite">
+          <div>
+            <p class="decision-label">当前动作</p>
+            <strong id="decision-title">积累证据</strong>
+            <span id="decision-copy">等待 6 小时与 24 小时窗口形成。</span>
+          </div>
+          <div id="decision-gates" class="decision-gates" aria-label="调仓门槛"></div>
+          <div class="decision-cost">
+            <p>20% 试仓迁移成本</p>
+            <strong id="migration-cost">—</strong>
+            <span id="migration-detail">公开 RPC 模型，非交易预检</span>
+          </div>
+        </div>
+
+        <div class="comparison-table-wrap">
+          <div class="comparison-table-head" aria-hidden="true">
+            <span>池子</span>
+            <span id="comparison-window-label">24H 成交</span>
+            <span>预计捕获费用</span>
+            <span>日化 / 粗年化</span>
+            <span>相对当前仓</span>
+          </div>
+          <div id="pool-comparison" class="comparison-table" role="table" aria-label="三个流动性池资金效率对照"></div>
+        </div>
+        <p id="comparison-note" class="comparison-note">
+          短窗外推不是未来收益承诺；净收益还需扣除无常损失与资产机会成本。
+        </p>
+      </section>
+
+      <section class="window-bar reveal">
+        <div>
+          <p class="section-kicker">观察窗口</p>
+          <h2>市场流动性与费用热区</h2>
+        </div>
+        <div id="window-tabs" class="window-tabs" role="tablist" aria-label="选择成交时间窗口">
+          <button type="button" data-window="cycle" role="tab">本轮周期</button>
+          <button type="button" data-window="1h" role="tab">1 小时</button>
+          <button type="button" data-window="6h" role="tab">6 小时</button>
+          <button type="button" data-window="24h" role="tab" aria-selected="true">24 小时</button>
+          <button type="button" data-window="7d" role="tab">7 天</button>
+        </div>
+      </section>
+
+      <section class="chart-panel chart-panel-hero reveal">
+        <header>
+          <div>
+            <p class="section-index">01</p>
+            <h3>当前市场活跃流动性</h3>
+          </div>
+          <div class="legend">
+            <span><i class="legend-market"></i>全池</span>
+            <span><i class="legend-ours"></i>我们的流动性</span>
+            <span><i class="legend-price"></i>现价</span>
+          </div>
+        </header>
+        <div class="chart-wrap">
+          <svg id="liquidity-chart" class="chart" role="img" aria-label="当前市场活跃流动性分布"></svg>
+        </div>
+      </section>
+
+      <section class="chart-panel reveal">
+        <header>
+          <div>
+            <p class="section-index">02</p>
+            <h3 id="volume-title">24 小时单边成交量</h3>
+          </div>
+          <p id="coverage-note" class="panel-note">原生代币数量按成交时 SPY/USDG 价格估值</p>
+        </header>
+        <div class="chart-wrap">
+          <svg id="volume-chart" class="chart" role="img" aria-label="PAIR 价格区间单边成交量"></svg>
+        </div>
+      </section>
+
+      <div class="split-grid reveal">
+        <section class="chart-panel compact">
+          <header>
+            <div>
+              <p class="section-index">03</p>
+              <h3>手续费密度</h3>
+            </div>
+            <p class="panel-note">全池估算费 / 当前流动性</p>
+          </header>
+          <div class="chart-wrap">
+            <svg id="efficiency-chart" class="chart chart-small" role="img" aria-label="手续费密度"></svg>
+          </div>
+        </section>
+        <section class="chart-panel compact">
+          <header>
+            <div>
+              <p class="section-index">04</p>
+              <h3>我们的当前份额</h3>
+            </div>
+            <p class="panel-note">按每个 200 Tick 价格段</p>
+          </header>
+          <div class="chart-wrap">
+            <svg id="share-chart" class="chart chart-small" role="img" aria-label="我们的当前活跃份额"></svg>
+          </div>
+        </section>
+      </div>
+
+      <section class="positions-section reveal">
+        <header>
+          <div>
+            <p class="section-kicker">Position ledger</p>
+            <h2>当前 LP 框架</h2>
+          </div>
+          <p id="position-verification" class="verification">等待链上核验</p>
+        </header>
+        <div id="positions" class="position-grid"></div>
+      </section>
+
+      <section class="evidence-strip reveal">
+        <div>
+          <p>口径边界</p>
+          <strong>市场热区是估算；NFT 未领取费用是安全区块上的 feeGrowth 读回。</strong>
+        </div>
+        <div>
+          <p>运行边界</p>
+          <strong>只读 RPC · 无私钥 · 无交易入口 · 不消耗链上 Gas。</strong>
+        </div>
+        <a href="/api/sources" target="_blank" rel="noreferrer">查看数据源 JSON ↗</a>
+      </section>
+
+      <footer>
+        <p>PAIR / SPY LIQUIDITY FIELD</p>
+        <p id="footer-update">最后有效快照 —</p>
+      </footer>
+    </main>
+
+    <div id="chart-tooltip" class="chart-tooltip" hidden></div>
+    <script type="module" src="/app.js?v=169c1b12"></script>
+  </body>
+</html>

@@ -1,0 +1,172 @@
+{
+  "schemaVersion": 1,
+  "chain": {
+    "id": 4663,
+    "name": "Robinhood Chain",
+    "defaultRpcUrl": "https://rpc.mainnet.chain.robinhood.com",
+    "confirmations": 128
+  },
+  "wallet": "0xe864237f450E3C813EB6C5652106EC3AFd9Bc919",
+  "contracts": {
+    "poolManager": "0x8366a39cc670b4001a1121b8f6a443a643e40951",
+    "stateView": "0xF3334192D15450CdD385c8B70e03f9A6bD9E673b",
+    "positionManager": "0x58daec3116aae6D93017bAAea7749052E8a04fA7",
+    "v3Quoter": "0x33e885ed0ec9bf04ecfb19341582aadcb4c8a9e7",
+    "spyUsdgV3Pool": "0xa7Bb1AC63BBaB0C44316E6c8C455213441689167"
+  },
+  "tokens": {
+    "weth": {
+      "address": "0x0Bd7D308f8E1639FAb988df18A8011f41EAcAD73",
+      "symbol": "WETH",
+      "decimals": 18
+    },
+    "spy": {
+      "address": "0x117cc2133c37B721F49dE2A7a74833232B3B4C0C",
+      "symbol": "SPY",
+      "decimals": 18
+    },
+    "pair": {
+      "address": "0x6b1d42927B1a84eC28Fa88d4fC6FA7AF404966be",
+      "symbol": "PAIR",
+      "decimals": 18
+    },
+    "usdg": {
+      "address": "0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168",
+      "symbol": "USDG",
+      "decimals": 6
+    },
+    "one": {
+      "address": "0xdCe5C6317222C5b6e5d963EeAC010DFc4dA9e6da",
+      "symbol": "$1",
+      "decimals": 18
+    }
+  },
+  "pool": {
+    "poolId": "0xf224a070c8626c890a085b258cf562ee4bf052b6d1d59104b3b44d722640c001",
+    "fee": 10000,
+    "tickSpacing": 200,
+    "hooks": "0x16D1560630Ce74af4478d9b8AD46548A092A2000"
+  },
+  "history": {
+    "anchorBlock": "53852060",
+    "anchorLabel": "主仓改造完成以来",
+    "windows": [
+      { "id": "cycle", "label": "本轮周期", "seconds": null },
+      { "id": "1h", "label": "1 小时", "seconds": 3600 },
+      { "id": "6h", "label": "6 小时", "seconds": 21600 },
+      { "id": "24h", "label": "24 小时", "seconds": 86400 },
+      { "id": "7d", "label": "7 天", "seconds": 604800 }
+    ]
+  },
+  "comparison": {
+    "minimumLeadPct": 30,
+    "confirmationWindows": ["6h", "24h"],
+    "maximumBreakEvenHours": 8,
+    "testCapitalPct": 20,
+    "rangeOptimization": {
+      "capitalUsdg": 170,
+      "minSpanTicks": 2000,
+      "maxSpanTicks": 3600,
+      "minimumRangePositionBps": 2000,
+      "maximumRangePositionBps": 7500
+    },
+    "migrationModel": {
+      "gasUnits": 700000,
+      "sourceSwapFeeBps": 5,
+      "slippageBufferBps": 10,
+      "ethQuoteAmount": "0.01",
+      "ethUsdgFeePips": 100
+    },
+    "pools": [
+      {
+        "id": "pair-usdg-1",
+        "label": "PAIR / USDG",
+        "feeLabel": "1%",
+        "poolId": "0x97f48c8d9639b7940874b6c6a43b3d606d070a694920b545acff9c35926593a6",
+        "feePips": 10000,
+        "tickSpacing": 100,
+        "hooks": "0x0000000000000000000000000000000000000000",
+        "initializedAtBlock": "51600436",
+        "exploreUrl": "https://app.uniswap.org/explore/pools/robinhood/0x97f48c8d9639b7940874b6c6a43b3d606d070a694920b545acff9c35926593a6",
+        "positions": [
+          {
+            "label": "USDG 窄区间",
+            "role": "direct-narrow",
+            "tokenId": "1843215",
+            "tickLower": 323400,
+            "tickUpper": 326900
+          }
+        ]
+      },
+      {
+        "id": "pair-usdg-3",
+        "label": "PAIR / USDG",
+        "feeLabel": "3%",
+        "poolId": "0x25779a6de9bc9f244211c4eeabca191966d4a18e97bbe690a4af91a29e65ec86",
+        "feePips": 30000,
+        "tickSpacing": 300,
+        "hooks": "0x0000000000000000000000000000000000000000",
+        "initializedAtBlock": "49795891",
+        "exploreUrl": "https://app.uniswap.org/explore/pools/robinhood/0x25779a6de9bc9f244211c4eeabca191966d4a18e97bbe690a4af91a29e65ec86"
+      }
+    ]
+  },
+  "focusBandUsdg": {
+    "low": 0.007,
+    "high": 0.008
+  },
+  "portfolio": {
+    "manifest": "lp-portfolio-ledger.json"
+  },
+  "positions": [
+    {
+      "label": "高位覆盖",
+      "role": "coverage",
+      "tokenId": "1772811",
+      "tickLower": 109000,
+      "tickUpper": 115800
+    },
+    {
+      "label": "宽幅进攻",
+      "role": "offensive-wide",
+      "tokenId": "1785211",
+      "tickLower": 107400,
+      "tickUpper": 114600
+    },
+    {
+      "label": "聚焦进攻",
+      "role": "offensive-focused",
+      "tokenId": "1785327",
+      "tickLower": 109000,
+      "tickUpper": 114000
+    },
+    {
+      "label": "高位续航仓",
+      "role": "high-band-extension",
+      "tokenId": "1908663",
+      "tickLower": 105600,
+      "tickUpper": 109600
+    },
+    {
+      "label": "高位接力仓",
+      "role": "high-band-relay",
+      "tokenId": "1936443",
+      "tickLower": 103400,
+      "tickUpper": 105600
+    },
+    {
+      "label": "NFT 1983646",
+      "role": "unclassified",
+      "tokenId": "1983646",
+      "tickLower": 99800,
+      "tickUpper": 103600
+    },
+    {
+      "label": "单边上行仓",
+      "role": "single-sided-upper",
+      "tokenId": "1988669",
+      "tickLower": 97400,
+      "tickUpper": 99800
+    }
+  ]
+}

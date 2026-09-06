@@ -1,0 +1,502 @@
+{
+  "schemaVersion": 1,
+  "positionMetadata": {
+    "1548977": { "label": "初始主仓", "role": "genesis-main" },
+    "1615859": { "label": "$1 测试仓", "role": "one-canary" },
+    "1643016": { "label": "手续费卫星 / 旧主仓", "role": "retired-main" },
+    "1719388": { "label": "旧高位覆盖", "role": "retired-coverage" },
+    "1726507": { "label": "手续费窄仓", "role": "retired-fee-band" },
+    "1732600": { "label": "旧进攻仓", "role": "retired-offensive" },
+    "1762219": { "label": "旧主仓", "role": "retired-main" },
+    "1772811": { "label": "高位覆盖", "role": "coverage" },
+    "1773157": { "label": "主 LP", "role": "base" },
+    "1785211": { "label": "宽幅进攻", "role": "offensive-wide" },
+    "1785327": { "label": "聚焦进攻", "role": "offensive-focused" },
+    "1843215": { "label": "USDG 窄区间", "role": "direct-narrow" },
+    "1871220": { "label": "已撤当前窄区间", "role": "retired-current-band" },
+    "1871913": { "label": "已撤当前热区补足", "role": "retired-current-band" },
+    "1908663": { "label": "高位续航仓", "role": "high-band-extension" },
+    "1983646": { "label": "高位单边仓", "role": "upper-single-sided" },
+    "1988669": { "label": "中高位主仓", "role": "upper-core" },
+    "2006287": { "label": "已撤高位接力仓", "role": "retired-upper-extension" },
+    "2008008": { "label": "高位补隙主仓", "role": "upper-gap-fill" }
+  },
+  "manualPositions": [
+    {
+      "tokenId": "1983646",
+      "poolKind": "pair-spy",
+      "tickLower": 99800,
+      "tickUpper": 103600,
+      "status": "active",
+      "mintBlock": "55619115",
+      "mintTransaction": "0xa677046e72b894cec4cb7f8dc64b1312000a33e6f1e7ca9b376e8705d4bea271",
+      "enteredAt": "2026-09-06T02:25:58.000Z",
+      "source": "decoded_position_manager_mint_plus_chain_inventory"
+    }
+  ],
+  "manualSupplyEvents": [
+    {
+      "tokenId": "1772811",
+      "id": "manual-ui-mint-1772811",
+      "kind": "mint",
+      "at": "2026-09-04T10:23:33.000Z",
+      "blockNumber": "54191115",
+      "transactionHash": "0xa41b5229c9dcc4ef6a73a872b0e46637d105417e9148d27c0a902d98e2988b25",
+      "amounts": { "spy": 0.2273533055034953, "pair": 8514.951949215507 },
+      "mark": { "spyUsdg": 774.16787021861, "pairUsdg": 0.0113293943, "quality": "nearest_prior_canonical_swap" },
+      "source": "chain_wallet_delta",
+      "quality": "verified_wallet_delta"
+    },
+    {
+      "tokenId": "1773157",
+      "id": "manual-ui-mint-1773157",
+      "kind": "mint",
+      "at": "2026-09-04T10:31:14.000Z",
+      "blockNumber": "54195702",
+      "transactionHash": "0xf8af84135eefddb226376191ae0c2dc42405f4f1b5556b6cca9eeba5e98d73d3",
+      "amounts": { "spy": 0.1294283338527323, "pair": 7002.042417059453 },
+      "mark": { "spyUsdg": 774.259284772644, "pairUsdg": 0.0110731121, "quality": "nearest_prior_canonical_swap" },
+      "source": "chain_wallet_delta",
+      "quality": "verified_wallet_delta"
+    },
+    {
+      "tokenId": "1983646",
+      "id": "manual-ui-mint-1983646",
+      "kind": "mint",
+      "at": "2026-09-06T02:25:58.000Z",
+      "blockNumber": "55619115",
+      "transactionHash": "0xa677046e72b894cec4cb7f8dc64b1312000a33e6f1e7ca9b376e8705d4bea271",
+      "amounts": { "spy": 0, "pair": 4124.675898495763 },
+      "mark": {
+        "spyUsdg": 773.530234211,
+        "pairUsdg": 0.02382986,
+        "quality": "nearest_prior_operation_preflight_623_blocks"
+      },
+      "source": "decoded_position_manager_mint_plus_receipt_wallet_delta",
+      "quality": "verified_wallet_delta",
+      "note": "Token quantities are exact from the receipt; the USDG mark is a nearby preflight observation because the public RPC does not serve the historical eth_call at this block."
+    }
+  ],
+  "manualExits": [
+    {
+      "tokenId": "1762219",
+      "at": "2026-09-04T10:27:14.000Z",
+      "blockNumber": "54193303",
+      "transactionHash": "0x4b6935aced61bcbfad1164d567c8f19b04dda1f0535848a16865d4e68ce9553f",
+      "grossAmounts": { "spy": 0.401322010746621933, "pair": 0 },
+      "principalAmounts": { "spy": 0.401322010746621933, "pair": 0 },
+      "terminalFeeAmounts": { "spy": 0, "pair": 0 },
+      "amountQuality": "verified_receipt_transfer_matches_position_tick_math",
+      "source": "chain_wallet_delta",
+      "quality": "verified_liquidity_zero",
+      "note": "Removal receipt transferred 0.401322010746621933 SPY to the wallet; the amount exactly matches principal TickMath for the recorded liquidity and range."
+    }
+  ],
+  "manualFeeClaims": [
+    {
+      "id": "manual-claim-1762219-54181106",
+      "sourceTokenIds": ["1762219"],
+      "targetTokenIds": ["1772811", "1773157"],
+      "at": "2026-09-04T10:06:41.000Z",
+      "blockNumber": "54181106",
+      "transactionHash": "0x745ae3cbfd71dc87b80888f81ceacf381668086a1795467e836c92144a8e1bef",
+      "amounts": { "spy": 0.023677866121494633, "pair": 1816.3067109726496 },
+      "mark": { "spyUsdg": 774.662811211569, "pairUsdg": 0.0104797378, "quality": "nearest_prior_canonical_swap" },
+      "source": "chain_wallet_delta",
+      "allocationQuality": "exact_single_position_wallet_delta",
+      "disposition": "mixed_wallet_funding"
+    },
+    {
+      "id": "manual-claim-1719388-54181432",
+      "sourceTokenIds": ["1719388"],
+      "targetTokenIds": ["1772811", "1773157"],
+      "at": "2026-09-04T10:07:15.000Z",
+      "blockNumber": "54181432",
+      "transactionHash": "0x2e03bf11f1b7614605422e5de4ec14d7a4b9db2c4a161b14f1a2faa81930d039",
+      "amounts": { "spy": 0.028679383958985886, "pair": 2437.996406597295 },
+      "mark": { "spyUsdg": 774.632196962909, "pairUsdg": 0.0103470843, "quality": "nearest_prior_canonical_swap" },
+      "source": "chain_wallet_delta",
+      "allocationQuality": "exact_single_position_wallet_delta",
+      "disposition": "mixed_wallet_funding"
+    },
+    {
+      "id": "manual-claim-1732600-54181701",
+      "sourceTokenIds": ["1732600"],
+      "targetTokenIds": ["1772811", "1773157"],
+      "at": "2026-09-04T10:07:42.000Z",
+      "blockNumber": "54181701",
+      "transactionHash": "0x5073d384617f7879f55b96aa5fe80b32db0e4c5d94e6c1fa498db6a660662c70",
+      "amounts": { "spy": 0.008043357594708691, "pair": 729.4820399410598 },
+      "mark": { "spyUsdg": 774.632196962909, "pairUsdg": 0.0103253793, "quality": "nearest_prior_canonical_swap" },
+      "source": "chain_wallet_delta",
+      "allocationQuality": "exact_single_position_wallet_delta",
+      "disposition": "mixed_wallet_funding"
+    },
+    {
+      "id": "manual-claim-1772811-54338598",
+      "sourceTokenIds": ["1772811"],
+      "at": "2026-09-04T14:32:13.000Z",
+      "blockNumber": "54338598",
+      "transactionHash": "0x09494e4cb18f4d52f04ce321becacff7991aa257d7bba1ebecab1497cea7e7b7",
+      "amounts": { "spy": 0.024513000331398773, "pair": 2009.8627292546132 },
+      "mark": { "spyUsdg": 773.121403312572, "pairUsdg": 0.0086008555, "quality": "nearest_prior_canonical_swap" },
+      "source": "chain_wallet_delta",
+      "allocationQuality": "exact_single_position_wallet_delta",
+      "disposition": "wallet_residual_or_later_reinvested"
+    },
+    {
+      "id": "manual-claim-1773157-54338954",
+      "sourceTokenIds": ["1773157"],
+      "at": "2026-09-04T14:32:49.000Z",
+      "blockNumber": "54338954",
+      "transactionHash": "0x385799135f651b16858d1772dda4505671b33299cb8209fff6483ca7bb0cb7bb",
+      "amounts": { "spy": 0.014840457974624029, "pair": 1245.7760183013893 },
+      "mark": { "spyUsdg": 772.923459056103, "pairUsdg": 0.008660784, "quality": "nearest_prior_canonical_swap" },
+      "source": "chain_wallet_delta",
+      "allocationQuality": "exact_single_position_wallet_delta",
+      "disposition": "wallet_residual_or_later_reinvested"
+    },
+    {
+      "id": "external-compound-1908663-55204050",
+      "sourceTokenIds": ["1908663"],
+      "targetTokenIds": ["1908663"],
+      "at": "2026-09-05T14:48:02.000Z",
+      "blockNumber": "55204050",
+      "transactionHash": "0xa23889613e922d9bce42c7896e05d45701fe28c67b2ecda1468a7f3f24f797d3",
+      "amounts": { "spy": 0.002002188008725637, "pair": 120.41374132260873 },
+      "mark": {
+        "spyUsdg": 772.2205424637372,
+        "pairUsdg": 0.014998765666467833,
+        "quality": "nearest_prior_canonical_pool_swaps"
+      },
+      "source": "decoded_increase_calldata_plus_receipt_wallet_delta_and_tick_math",
+      "allocationQuality": "exact_same_position_fee_credit_used_by_close_currency",
+      "disposition": "reinvested_same_nft"
+    },
+    {
+      "id": "external-claim-1785211-55217983",
+      "sourceTokenIds": ["1785211"],
+      "targetTokenIds": ["1908663"],
+      "at": "2026-09-05T15:11:29.000Z",
+      "blockNumber": "55217983",
+      "transactionHash": "0x1dc374676c5f2d7909ebcc80f9fdb8d1af7fad91c338293560d9f09dd7a2284c",
+      "amounts": { "spy": 0.029765062671519016, "pair": 1495.0453466581917 },
+      "mark": {
+        "spyUsdg": 772.4522317938648,
+        "pairUsdg": 0.015042323036730322,
+        "quality": "nearest_prior_canonical_pool_swaps"
+      },
+      "source": "chain_wallet_delta",
+      "allocationQuality": "exact_single_position_wallet_delta",
+      "disposition": "reinvested_into_1908663"
+    },
+    {
+      "id": "external-claim-1908663-55218112",
+      "sourceTokenIds": ["1908663"],
+      "targetTokenIds": ["1908663"],
+      "at": "2026-09-05T15:11:42.000Z",
+      "blockNumber": "55218112",
+      "transactionHash": "0x43a37b10e70d9f49b6e9389f9fd126dc79b0761ded7609a0b24c014afee7b359",
+      "amounts": { "spy": 0.019463150237104417, "pair": 972.3029283866256 },
+      "mark": {
+        "spyUsdg": 772.4522317938648,
+        "pairUsdg": 0.015042323036730322,
+        "quality": "nearest_prior_canonical_pool_swaps"
+      },
+      "source": "chain_wallet_delta",
+      "allocationQuality": "exact_single_position_wallet_delta",
+      "disposition": "reinvested_same_nft"
+    },
+    {
+      "id": "external-compound-1908663-55218519",
+      "sourceTokenIds": ["1908663"],
+      "targetTokenIds": ["1908663"],
+      "at": "2026-09-05T15:12:23.000Z",
+      "blockNumber": "55218519",
+      "transactionHash": "0x51f8dd6a360a61e7c63b573c39d5220281aeb319ced57ad065ce1a3308035e85",
+      "amounts": { "spy": 0.000611498699712828, "pair": 38.546923110812 },
+      "mark": {
+        "spyUsdg": 772.4522317938648,
+        "pairUsdg": 0.015042323036730322,
+        "quality": "nearest_prior_canonical_pool_swaps"
+      },
+      "source": "decoded_increase_calldata_plus_receipt_wallet_delta_and_tick_math",
+      "allocationQuality": "exact_same_position_fee_credit_used_by_close_currency",
+      "disposition": "reinvested_same_nft"
+    },
+    {
+      "id": "manual-claim-1988669-55914864",
+      "sourceTokenIds": ["1988669"],
+      "at": "2026-09-06T10:42:59.000Z",
+      "blockNumber": "55914864",
+      "transactionHash": "0x002ca59d6cb7e439807acaf19ed73834b85218aacec7f497f09f07412b119911",
+      "amounts": { "spy": 0.023977935260933086, "pair": 388.75915514284625 },
+      "mark": {
+        "spyUsdg": 771.110385284957,
+        "pairUsdg": 0.043219878165,
+        "quality": "derived_from_nearby_spy_pair_execution"
+      },
+      "source": "decoded_zero_liquidity_decrease_plus_receipt_wallet_delta",
+      "allocationQuality": "exact_single_position_wallet_delta",
+      "disposition": "wallet_then_partially_converted"
+    },
+    {
+      "id": "manual-claim-2006287-55914960",
+      "sourceTokenIds": ["2006287"],
+      "at": "2026-09-06T10:43:09.000Z",
+      "blockNumber": "55914960",
+      "transactionHash": "0x56bd6dab977e291c82f0f8d2dc9e2f8217c518a69b7e4464eb4549c2ac48077e",
+      "amounts": { "spy": 0.022178228576285778, "pair": 343.0610956518332 },
+      "mark": {
+        "spyUsdg": 771.110385284957,
+        "pairUsdg": 0.043219878165,
+        "quality": "derived_from_nearby_spy_pair_execution"
+      },
+      "source": "decoded_zero_liquidity_decrease_plus_receipt_wallet_delta",
+      "allocationQuality": "exact_single_position_wallet_delta",
+      "disposition": "wallet_then_partially_converted"
+    }
+  ],
+  "manualTransactions": [
+    {
+      "at": "2026-09-04T10:06:41.000Z",
+      "blockNumber": "54181106",
+      "hash": "0x745ae3cbfd71dc87b80888f81ceacf381668086a1795467e836c92144a8e1bef",
+      "label": "手工领取 NFT 1762219 手续费",
+      "status": "success",
+      "gasCostWei": "51343026558000",
+      "action": "fee_claim"
+    },
+    {
+      "at": "2026-09-04T10:07:15.000Z",
+      "blockNumber": "54181432",
+      "hash": "0x2e03bf11f1b7614605422e5de4ec14d7a4b9db2c4a161b14f1a2faa81930d039",
+      "label": "手工领取 NFT 1719388 手续费",
+      "status": "success",
+      "gasCostWei": "52483884120000",
+      "action": "fee_claim"
+    },
+    {
+      "at": "2026-09-04T10:07:42.000Z",
+      "blockNumber": "54181701",
+      "hash": "0x5073d384617f7879f55b96aa5fe80b32db0e4c5d94e6c1fa498db6a660662c70",
+      "label": "手工领取 NFT 1732600 手续费",
+      "status": "success",
+      "gasCostWei": "50501792598000",
+      "action": "fee_claim"
+    },
+    {
+      "at": "2026-09-04T10:13:07.000Z",
+      "blockNumber": "54184934",
+      "hash": "0xe5eb0b37bae3680ddcb47a83a58041bd06d233aab10aa5b6db20c636c02eacba",
+      "label": "手工用 0.04 ETH 买入 SPY",
+      "status": "success",
+      "gasCostWei": "162379592100000",
+      "valueEth": 0.04,
+      "action": "fund_swap",
+      "capitalFlow": "lp_directed"
+    },
+    {
+      "at": "2026-09-04T10:23:33.000Z",
+      "blockNumber": "54191115",
+      "hash": "0xa41b5229c9dcc4ef6a73a872b0e46637d105417e9148d27c0a902d98e2988b25",
+      "label": "手工铸造 NFT 1772811",
+      "status": "success",
+      "gasCostWei": "131436125956000",
+      "action": "mint"
+    },
+    {
+      "at": "2026-09-04T10:27:14.000Z",
+      "blockNumber": "54193303",
+      "hash": "0x4b6935aced61bcbfad1164d567c8f19b04dda1f0535848a16865d4e68ce9553f",
+      "label": "手工撤空 NFT 1762219",
+      "status": "success",
+      "gasCostWei": "43312435320000",
+      "action": "remove"
+    },
+    {
+      "at": "2026-09-04T10:29:12.000Z",
+      "blockNumber": "54194466",
+      "hash": "0x8b078514647a3ac895019f1ffcceca10ffda6d42ab8b10ea35bff8d46e27863e",
+      "label": "手工将 SPY 配平为 PAIR",
+      "status": "success",
+      "gasCostWei": "59610237288000",
+      "action": "swap"
+    },
+    {
+      "at": "2026-09-04T10:31:14.000Z",
+      "blockNumber": "54195702",
+      "hash": "0xf8af84135eefddb226376191ae0c2dc42405f4f1b5556b6cca9eeba5e98d73d3",
+      "label": "手工铸造 NFT 1773157",
+      "status": "success",
+      "gasCostWei": "113478183950000",
+      "action": "mint"
+    },
+    {
+      "at": "2026-09-04T14:32:13.000Z",
+      "blockNumber": "54338598",
+      "hash": "0x09494e4cb18f4d52f04ce321becacff7991aa257d7bba1ebecab1497cea7e7b7",
+      "label": "手工领取 NFT 1772811 手续费",
+      "status": "success",
+      "gasCostWei": "232275415968000",
+      "action": "fee_claim"
+    },
+    {
+      "at": "2026-09-04T14:32:16.000Z",
+      "blockNumber": "54338628",
+      "hash": "0x177535cb9b19ea0df15e2c138b26ba47c8c1254e6bb66c4a68d725461121acb1",
+      "label": "手工结算 NFT 1772811 零余额动作",
+      "status": "success",
+      "gasCostWei": "94520020986000",
+      "action": "fee_claim_zero"
+    },
+    {
+      "at": "2026-09-04T14:32:49.000Z",
+      "blockNumber": "54338954",
+      "hash": "0x385799135f651b16858d1772dda4505671b33299cb8209fff6483ca7bb0cb7bb",
+      "label": "手工领取 NFT 1773157 手续费",
+      "status": "success",
+      "gasCostWei": "165664829880000",
+      "action": "fee_claim"
+    },
+    {
+      "at": "2026-09-05T14:46:25.000Z",
+      "blockNumber": "55203061",
+      "hash": "0xfa60aa349d5fec1f06344a6fcdc758f661fccf413ea5e4535c92eeb21addf4be",
+      "label": "外部钱包撤空 NFT 1843215",
+      "status": "success",
+      "gasCostWei": "45387992832000",
+      "action": "remove",
+      "actor": "external_wallet_signer_unknown_to_this_executor"
+    },
+    {
+      "at": "2026-09-05T14:46:57.000Z",
+      "blockNumber": "55203380",
+      "hash": "0x9a91aad54ef0ead7c2a91152d629f6f43a03a3d638b171a7ac56ea3b4b9f5197",
+      "label": "外部钱包授权 OKX DEX 使用 USDG",
+      "status": "success",
+      "gasCostWei": "22365567600000",
+      "action": "approval",
+      "actor": "external_wallet_signer_unknown_to_this_executor"
+    },
+    {
+      "at": "2026-09-05T14:46:58.000Z",
+      "blockNumber": "55203383",
+      "hash": "0x4797466f6ab681e51f5db211bd4e201f6295bd31e430dbc9912331a1e7c6ffbb",
+      "label": "外部钱包经 OKX DEX 将全部 USDG 换为 SPY",
+      "status": "success",
+      "gasCostWei": "115012802156000",
+      "action": "swap",
+      "actor": "external_wallet_signer_unknown_to_this_executor"
+    },
+    {
+      "at": "2026-09-05T14:48:02.000Z",
+      "blockNumber": "55204050",
+      "hash": "0xa23889613e922d9bce42c7896e05d45701fe28c67b2ecda1468a7f3f24f797d3",
+      "label": "外部钱包追加 NFT 1908663 并复投其已生手续费",
+      "status": "success",
+      "gasCostWei": "101086627800000",
+      "action": "increase",
+      "actor": "external_wallet_signer_unknown_to_this_executor"
+    },
+    {
+      "at": "2026-09-05T15:11:29.000Z",
+      "blockNumber": "55217983",
+      "hash": "0x1dc374676c5f2d7909ebcc80f9fdb8d1af7fad91c338293560d9f09dd7a2284c",
+      "label": "外部钱包领取 NFT 1785211 手续费",
+      "status": "success",
+      "gasCostWei": "55734675696000",
+      "action": "fee_claim",
+      "actor": "external_wallet_signer_unknown_to_this_executor"
+    },
+    {
+      "at": "2026-09-05T15:11:42.000Z",
+      "blockNumber": "55218112",
+      "hash": "0x43a37b10e70d9f49b6e9389f9fd126dc79b0761ded7609a0b24c014afee7b359",
+      "label": "外部钱包领取 NFT 1908663 手续费",
+      "status": "success",
+      "gasCostWei": "56112181272000",
+      "action": "fee_claim",
+      "actor": "external_wallet_signer_unknown_to_this_executor"
+    },
+    {
+      "at": "2026-09-05T15:12:23.000Z",
+      "blockNumber": "55218519",
+      "hash": "0x51f8dd6a360a61e7c63b573c39d5220281aeb319ced57ad065ce1a3308035e85",
+      "label": "外部钱包追加 NFT 1908663 并复投手续费",
+      "status": "success",
+      "gasCostWei": "76614136504000",
+      "action": "increase",
+      "actor": "external_wallet_signer_unknown_to_this_executor"
+    },
+    {
+      "at": "2026-09-06T02:25:58.000Z",
+      "blockNumber": "55619115",
+      "hash": "0xa677046e72b894cec4cb7f8dc64b1312000a33e6f1e7ca9b376e8705d4bea271",
+      "label": "外部钱包单边铸造 NFT 1983646",
+      "status": "success",
+      "gasCostWei": "196740092440000",
+      "action": "mint",
+      "actor": "external_wallet_signer_unknown_to_this_executor"
+    },
+    {
+      "at": "2026-09-06T10:42:59.000Z",
+      "blockNumber": "55914864",
+      "hash": "0x002ca59d6cb7e439807acaf19ed73834b85218aacec7f497f09f07412b119911",
+      "label": "外部钱包领取 NFT 1988669 手续费",
+      "status": "success",
+      "gasCostWei": "55873182816000",
+      "action": "fee_claim",
+      "actor": "external_wallet_signer_unknown_to_this_executor"
+    },
+    {
+      "at": "2026-09-06T10:43:09.000Z",
+      "blockNumber": "55914960",
+      "hash": "0x56bd6dab977e291c82f0f8d2dc9e2f8217c518a69b7e4464eb4549c2ac48077e",
+      "label": "外部钱包领取 NFT 2006287 手续费",
+      "status": "success",
+      "gasCostWei": "67098240370000",
+      "action": "fee_claim",
+      "actor": "external_wallet_signer_unknown_to_this_executor"
+    },
+    {
+      "at": "2026-09-06T10:44:10.000Z",
+      "blockNumber": "55915580",
+      "hash": "0x805e361e3c5981530031dbd1aac9e7d8002b2bfcbba5f0e10b3a05bf878eeaa8",
+      "label": "外部钱包将 0.05 SPY 换为 892.078388496990553545 PAIR",
+      "status": "success",
+      "gasCostWei": "87962904426000",
+      "action": "swap",
+      "actor": "external_wallet_signer_unknown_to_this_executor"
+    }
+  ],
+  "lineages": [
+    { "from": "1548977", "to": "1643016", "type": "migration", "label": "旧主仓迁移并复投" },
+    { "from": "1643016", "to": "1762219", "type": "migration", "label": "主仓向高成交区迁移" },
+    { "from": "1726507", "to": "1732600", "type": "migration", "label": "手续费仓改为进攻仓" },
+    { "from": "1719388", "to": "1785211", "type": "migration", "label": "旧覆盖仓滚动为宽幅进攻" },
+    { "from": "1732600", "to": "1785327", "type": "migration", "label": "旧进攻仓滚动为聚焦进攻" },
+    { "from": "1762219", "to": "1773157", "type": "mixed_manual_roll", "label": "手工撤仓、配平后进入新主仓" },
+    { "from": "1762219", "to": "1772811", "type": "mixed_fee_funding", "label": "领取手续费参与高位混合资金" },
+    { "from": "1719388", "to": "1772811", "type": "mixed_fee_funding", "label": "领取手续费参与高位混合资金" },
+    { "from": "1732600", "to": "1772811", "type": "mixed_fee_funding", "label": "领取手续费参与高位混合资金" },
+    { "from": "1773157", "to": "1843215", "type": "fee_reinvestment", "label": "批量领取后投入 USDG 窄仓" },
+    { "from": "1772811", "to": "1843215", "type": "fee_reinvestment", "label": "批量领取后投入 USDG 窄仓" },
+    { "from": "1785211", "to": "1843215", "type": "fee_reinvestment", "label": "批量领取后投入 USDG 窄仓" },
+    { "from": "1785327", "to": "1843215", "type": "fee_reinvestment", "label": "批量领取后投入 USDG 窄仓" },
+    { "from": "1871220", "to": "1908663", "type": "high_band_roll", "label": "撤出低位窄仓并并入高位续航" },
+    { "from": "1871913", "to": "1908663", "type": "high_band_roll", "label": "撤出低位补足仓并并入高位续航" },
+    {
+      "from": "1843215",
+      "to": "1908663",
+      "type": "external_cross_pool_reallocation",
+      "label": "外部钱包撤空 USDG 窄仓、经 SPY 配平后追加高位续航"
+    },
+    {
+      "from": "2006287",
+      "to": "2008008",
+      "type": "pair_only_consolidation",
+      "label": "撤空高位接力仓并将其 PAIR 精确并入高位补隙主仓"
+    }
+  ]
+}

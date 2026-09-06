@@ -1,0 +1,59 @@
+{
+  "name": "robinhood-pair-liquidity",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Audited PAIR concentrated-liquidity operations and public dashboard for Robinhood Chain",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "lint": "eslint lib dashboard/lib dashboard/server.mjs dashboard/public/app.js scripts test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc --project tsconfig.json --noEmit",
+    "check": "npm run format:check && npm run lint && npm run typecheck && npm test && npm run portfolio:verify",
+    "security:audit:dashboard": "npm audit --prefix dashboard --omit=dev --audit-level=high",
+    "portfolio:build": "node --no-warnings scripts/build-lp-portfolio-ledger.mjs",
+    "portfolio:verify": "node scripts/verify-public-ledger.mjs",
+    "dashboard": "node --no-warnings dashboard/server.mjs",
+    "dashboard:check": "node --check scripts/build-lp-portfolio-ledger.mjs && node --check dashboard/lib/portfolio.mjs && node --check dashboard/lib/collector.mjs && node --check dashboard/lib/runtime-status.mjs && node --check dashboard/server.mjs && node --check dashboard/public/app.js && node --test test/pair-dashboard.test.mjs test/runtime-status.test.mjs",
+    "lp:status": "node scripts/pair-lp-canary.mjs status",
+    "retirement:preflight": "node scripts/pair-lp-canary.mjs target-retirement-preflight",
+    "retirement:enter": "node scripts/pair-lp-canary.mjs target-retirement-enter",
+    "retirement:resume": "node scripts/pair-lp-canary.mjs target-retirement-resume",
+    "retirement:status": "node scripts/pair-lp-canary.mjs target-retirement-status",
+    "increase:preflight": "node scripts/pair-fee-spy-only-to-pair.mjs position-pair-increase-preflight",
+    "increase:enter": "node scripts/pair-fee-spy-only-to-pair.mjs position-pair-increase-enter",
+    "increase:resume": "node scripts/pair-fee-spy-only-to-pair.mjs position-pair-increase-resume",
+    "increase:status": "node scripts/pair-fee-spy-only-to-pair.mjs position-pair-increase-status",
+    "pair-usdg:preflight": "node scripts/pair-usdg-narrow.mjs preflight",
+    "pair-usdg:enter": "node scripts/pair-usdg-narrow.mjs enter",
+    "pair-usdg:resume": "node scripts/pair-usdg-narrow.mjs resume",
+    "pair-usdg:status": "node scripts/pair-usdg-narrow.mjs status",
+    "fees:preflight": "node scripts/pair-usdg-narrow.mjs fees-collect-preflight",
+    "fees:enter": "node scripts/pair-usdg-narrow.mjs fees-collect-enter",
+    "fees:resume": "node scripts/pair-usdg-narrow.mjs fees-collect-resume",
+    "fees:status": "node scripts/pair-usdg-narrow.mjs fees-collect-status",
+    "watch:arm": "node scripts/pair-usdg-narrow-watch.mjs arm",
+    "watch:run": "node scripts/pair-usdg-narrow-watch.mjs watch",
+    "watch:status": "node scripts/pair-usdg-narrow-watch.mjs status",
+    "watch:disarm": "node scripts/pair-usdg-narrow-watch.mjs disarm",
+    "liquidity-map": "node scripts/pair-liquidity-map.mjs",
+    "range-study": "node scripts/pair-usdg-range-study.mjs"
+  },
+  "dependencies": {
+    "@uniswap/sdk-core": "7.19.2",
+    "@uniswap/v3-sdk": "3.31.3",
+    "@uniswap/v4-sdk": "2.3.3",
+    "viem": "2.56.3"
+  },
+  "devDependencies": {
+    "@eslint/js": "10.0.1",
+    "eslint": "10.10.0",
+    "globals": "17.12.0",
+    "prettier": "3.9.6",
+    "typescript": "7.0.2"
+  }
+}
