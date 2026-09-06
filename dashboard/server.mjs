@@ -64,6 +64,8 @@ const collector = new PairDashboardCollector({
   rpcMinimumIntervalMs: process.env.PAIR_DASHBOARD_RPC_MIN_INTERVAL_MS,
   rpcBatchSize: process.env.PAIR_DASHBOARD_RPC_BATCH_SIZE,
   rpcBatchWaitMs: process.env.PAIR_DASHBOARD_RPC_BATCH_WAIT_MS,
+  rpcMulticallBatchBytes: process.env.PAIR_DASHBOARD_RPC_MULTICALL_BATCH_BYTES,
+  rpcMulticallWaitMs: process.env.PAIR_DASHBOARD_RPC_MULTICALL_WAIT_MS,
   onProgress(progress) {
     runtime.progress = { ...progress, at: new Date().toISOString() }
   },
