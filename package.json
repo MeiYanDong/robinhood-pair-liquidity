@@ -18,7 +18,7 @@
     "portfolio:build": "node --no-warnings scripts/build-lp-portfolio-ledger.mjs",
     "portfolio:verify": "node scripts/verify-public-ledger.mjs",
     "dashboard": "node --no-warnings dashboard/server.mjs",
-    "dashboard:check": "node --check scripts/build-lp-portfolio-ledger.mjs && node --check dashboard/lib/portfolio.mjs && node --check dashboard/lib/collector.mjs && node --check dashboard/lib/runtime-status.mjs && node --check dashboard/server.mjs && node --check dashboard/public/app.js && node --test test/pair-dashboard.test.mjs test/runtime-status.test.mjs",
+    "dashboard:check": "node --check scripts/build-lp-portfolio-ledger.mjs && node --check dashboard/lib/portfolio.mjs && node --check dashboard/lib/collector.mjs && node --check dashboard/lib/runtime-status.mjs && node --check dashboard/server.mjs && node --check dashboard/public/app.js && node --test test/pair-dashboard.test.mjs test/rpc-rate-limit.test.mjs test/runtime-status.test.mjs",
     "lp:status": "node scripts/pair-lp-canary.mjs status",
     "retirement:preflight": "node scripts/pair-lp-canary.mjs target-retirement-preflight",
     "retirement:enter": "node scripts/pair-lp-canary.mjs target-retirement-enter",

@@ -29,6 +29,38 @@ const BLOCK_BATCH_PAUSE_MS = 600
 const RPC_READ_ATTEMPTS = 6
 const SYNC_CHUNK_PAUSE_MS = 250
 
+export function createRpcRequestGate({
+  minimumIntervalMs = 0,
+  now = () => Date.now(),
+  wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)),
+} = {}) {
+  const interval = Math.max(0, Number(minimumIntervalMs) || 0)
+  let schedule = Promise.resolve()
+  let nextStartAt = 0
+
+  return function gate(operation) {
+    const ready = schedule.then(async () => {
+      const waitMs = Math.max(0, nextStartAt - now())
+      if (waitMs > 0) await wait(waitMs)
+      nextStartAt = now() + interval
+    })
+    schedule = ready.catch(() => {})
+    return ready.then(operation)
+  }
+}
+
+function gatedTransport(transport, gate) {
+  return (options) => {
+    const instance = transport(options)
+    return {
+      ...instance,
+      request(parameters) {
+        return gate(() => instance.request(parameters))
+      },
+    }
+  }
+}
+
 const TICK_MULTIPLIERS = [
   0xfffcb933bd6fad37aa2d162d1a594001n,
   0xfff97272373d413259a46990580e213an,
@@ -765,7 +797,7 @@ class Store {
   }
 }
 
-async function fetchBlockBatch(rpcUrl, blockNumbers) {
+async function fetchBlockBatch(rpcUrl, blockNumbers, gate = (operation) => operation()) {
   const unique = [...new Set(blockNumbers.map(String))].map(BigInt)
   const blocks = []
   for (let offset = 0; offset < unique.length; offset += BLOCK_BATCH) {
@@ -780,12 +812,14 @@ async function fetchBlockBatch(rpcUrl, blockNumbers) {
     let lastError
     for (let attempt = 0; attempt < BLOCK_FETCH_ATTEMPTS; attempt += 1) {
       try {
-        response = await fetch(rpcUrl, {
-          method: 'POST',
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify(body),
-          signal: AbortSignal.timeout(30_000),
-        })
+        response = await gate(() =>
+          fetch(rpcUrl, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(body),
+            signal: AbortSignal.timeout(30_000),
+          }),
+        )
       } catch (error) {
         lastError = error
         if (attempt === BLOCK_FETCH_ATTEMPTS - 1) throw error
@@ -1032,11 +1066,16 @@ export function allocateDirectSwapToBins(
 }
 
 export class PairDashboardCollector {
-  constructor({ configPath, databasePath, rpcUrl, confirmations, onProgress = () => {} }) {
+  constructor({ configPath, databasePath, rpcUrl, confirmations, rpcMinimumIntervalMs, onProgress = () => {} }) {
     this.configPath = configPath
     this.config = JSON.parse(fs.readFileSync(configPath, 'utf8'))
     this.rpcUrl = rpcUrl || this.config.chain.defaultRpcUrl
     this.confirmations = BigInt(confirmations ?? this.config.chain.confirmations ?? 3)
+    this.rpcMinimumIntervalMs = Math.max(
+      0,
+      Number(rpcMinimumIntervalMs ?? this.config.chain.rpcMinimumIntervalMs ?? 150),
+    )
+    this.rpcGate = createRpcRequestGate({ minimumIntervalMs: this.rpcMinimumIntervalMs })
     this.onProgress = onProgress
 
     const chain = defineChain({
@@ -1047,7 +1086,7 @@ export class PairDashboardCollector {
     })
     this.client = createPublicClient({
       chain,
-      transport: http(undefined, { timeout: 30_000, retryCount: 3 }),
+      transport: gatedTransport(http(undefined, { timeout: 30_000, retryCount: 3 }), this.rpcGate),
     })
     this.wallet = getAddress(this.config.wallet)
     this.poolManager = getAddress(this.config.contracts.poolManager)
@@ -1171,7 +1210,7 @@ export class PairDashboardCollector {
         this.getBlock({ blockNumber: end }),
       ])
       const eventBlocks = logs.map((log) => log.blockNumber)
-      const blocks = eventBlocks.length ? await fetchBlockBatch(this.rpcUrl, eventBlocks) : []
+      const blocks = eventBlocks.length ? await fetchBlockBatch(this.rpcUrl, eventBlocks, this.rpcGate) : []
       this.store.commitComparisonChunk({
         poolId: pool.poolId,
         logs,
@@ -1216,7 +1255,7 @@ export class PairDashboardCollector {
         this.getBlock({ blockNumber: end }),
       ])
       const eventBlocks = pairLogs.map((log) => log.blockNumber)
-      const blocks = eventBlocks.length ? await fetchBlockBatch(this.rpcUrl, eventBlocks) : []
+      const blocks = eventBlocks.length ? await fetchBlockBatch(this.rpcUrl, eventBlocks, this.rpcGate) : []
       this.store.commitChunk({
         pairLogs,
         markLogs,

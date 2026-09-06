@@ -4,6 +4,7 @@
     "id": 4663,
     "name": "Robinhood Chain",
     "defaultRpcUrl": "https://rpc.mainnet.chain.robinhood.com",
+    "rpcMinimumIntervalMs": 150,
     "confirmations": 128
   },
   "wallet": "0xe864237f450E3C813EB6C5652106EC3AFd9Bc919",
