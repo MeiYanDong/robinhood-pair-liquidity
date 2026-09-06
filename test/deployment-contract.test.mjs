@@ -21,4 +21,5 @@ test('release installation requires and preserves exact Git provenance', () => {
   assert.match(installer, /GIT_COMMIT is missing/u)
   assert.match(installer, /\^\[0-9a-f\]\{40\}\$/u)
   assert.match(installer, /"\$\{release_dir\}\/GIT_COMMIT"/u)
+  assert.match(installer, /seq 1 75/u)
 })

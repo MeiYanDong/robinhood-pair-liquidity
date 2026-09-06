@@ -11,4 +11,5 @@
 - Aligned the systemd runtime contract with that cadence and made exact Git provenance mandatory for every installed release.
 - Lowered the public-RPC cadence to one minute after a 30-second production soak still throttled, and distinguish fresh-but-degraded snapshots from genuinely stale data.
 - Require every restarted dashboard process to publish one successful current-process snapshot before readiness can pass.
+- Give deployment readiness two full one-minute refresh opportunities before the installer reports failure.
 - Added lint, formatting, scoped JavaScript type checks, tests, CI, an ADR, and an operation tech spec.

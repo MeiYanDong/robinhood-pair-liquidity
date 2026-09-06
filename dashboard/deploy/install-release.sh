@@ -52,7 +52,8 @@ systemctl enable --now nginx pair-liquidity-dashboard
 systemctl reload nginx
 systemctl restart pair-liquidity-dashboard
 
-for _ in $(seq 1 30); do
+# Allow one failed initial refresh plus the next one-minute scheduled cycle.
+for _ in $(seq 1 75); do
   if curl --fail --silent --show-error http://127.0.0.1:8080/readyz >/dev/null; then
     echo "pair-liquidity-dashboard installed: ${release_id}"
     exit 0
