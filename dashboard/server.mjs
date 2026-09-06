@@ -14,8 +14,12 @@ const DB_PATH = path.resolve(process.env.PAIR_DASHBOARD_DB || path.join(STATE_DI
 const SNAPSHOT_PATH = path.resolve(process.env.PAIR_DASHBOARD_SNAPSHOT || path.join(STATE_DIR, 'latest.json'))
 const PORT = Number(process.env.PAIR_DASHBOARD_PORT || 8080)
 const HOST = process.env.PAIR_DASHBOARD_HOST || '127.0.0.1'
-const REFRESH_MS = Math.max(5_000, Number(process.env.PAIR_DASHBOARD_REFRESH_MS || 15_000))
-const REFRESH_RETRIES = Math.max(0, Math.min(5, Number(process.env.PAIR_DASHBOARD_RETRIES || 2)))
+const REFRESH_MS = Math.max(5_000, Number(process.env.PAIR_DASHBOARD_REFRESH_MS || 30_000))
+// The transport already retries individual RPC requests. Re-running the whole
+// snapshot immediately after a public-RPC throttle multiplies load and delays
+// recovery, so the default is to preserve the last good snapshot and wait for
+// the next scheduled refresh.
+const REFRESH_RETRIES = Math.max(0, Math.min(5, Number(process.env.PAIR_DASHBOARD_RETRIES || 0)))
 
 fs.mkdirSync(STATE_DIR, { recursive: true })
 
