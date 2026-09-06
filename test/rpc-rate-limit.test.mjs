@@ -87,6 +87,28 @@ test('collector batches concurrent JSON-RPC methods into one HTTP request', asyn
   }
 })
 
+test('collector aggregates contract reads through the verified Multicall3 deployment', () => {
+  const temporaryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'pair-rpc-multicall-'))
+  const collector = new PairDashboardCollector({
+    configPath: CONFIG_PATH,
+    databasePath: path.join(temporaryDirectory, 'history.sqlite'),
+    rpcUrl: 'https://rpc.invalid.example',
+  })
+
+  try {
+    assert.deepEqual(collector.client.chain.contracts.multicall3, {
+      address: '0xcA11bde05977b3631167028862bE2a173976CA11',
+      blockCreated: 0,
+    })
+    assert.deepEqual(collector.client.batch, {
+      multicall: { batchSize: 16_384, wait: 25 },
+    })
+  } finally {
+    collector.close()
+    fs.rmSync(temporaryDirectory, { force: true, recursive: true })
+  }
+})
+
 test('lifecycle audit fills one RPC batch without exceeding its method budget', async () => {
   const temporaryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'pair-rpc-lifecycle-'))
   const collector = new PairDashboardCollector({

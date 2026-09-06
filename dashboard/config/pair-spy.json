@@ -7,6 +7,8 @@
     "rpcMinimumIntervalMs": 200,
     "rpcBatchSize": 20,
     "rpcBatchWaitMs": 25,
+    "rpcMulticallBatchBytes": 16384,
+    "rpcMulticallWaitMs": 25,
     "confirmations": 128
   },
   "wallet": "0xe864237f450E3C813EB6C5652106EC3AFd9Bc919",

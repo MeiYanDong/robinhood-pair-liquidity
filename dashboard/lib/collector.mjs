@@ -28,6 +28,7 @@ const BLOCK_FETCH_ATTEMPTS = 9
 const BLOCK_BATCH_PAUSE_MS = 600
 const RPC_READ_ATTEMPTS = 6
 const SYNC_CHUNK_PAUSE_MS = 250
+const MULTICALL3_ADDRESS = getAddress('0xcA11bde05977b3631167028862bE2a173976CA11')
 
 function finiteSetting(value, fallback, minimum, integer = false) {
   const numeric = Number(value)
@@ -1068,6 +1069,8 @@ export class PairDashboardCollector {
     rpcMinimumIntervalMs,
     rpcBatchSize,
     rpcBatchWaitMs,
+    rpcMulticallBatchBytes,
+    rpcMulticallWaitMs,
     rpcFetchFn = fetch,
     onProgress = () => {},
   }) {
@@ -1078,6 +1081,13 @@ export class PairDashboardCollector {
     this.rpcMinimumIntervalMs = finiteSetting(rpcMinimumIntervalMs ?? this.config.chain.rpcMinimumIntervalMs, 150, 0)
     this.rpcBatchSize = finiteSetting(rpcBatchSize ?? this.config.chain.rpcBatchSize, 20, 1, true)
     this.rpcBatchWaitMs = finiteSetting(rpcBatchWaitMs ?? this.config.chain.rpcBatchWaitMs, 25, 0)
+    this.rpcMulticallBatchBytes = finiteSetting(
+      rpcMulticallBatchBytes ?? this.config.chain.rpcMulticallBatchBytes,
+      16_384,
+      1,
+      true,
+    )
+    this.rpcMulticallWaitMs = finiteSetting(rpcMulticallWaitMs ?? this.config.chain.rpcMulticallWaitMs, 25, 0, true)
     this.rpcMethodConcurrency = this.rpcBatchSize
     this.rpcFetchFn = rpcFetchFn
     this.rpcGate = createRpcRequestGate({ minimumIntervalMs: this.rpcMinimumIntervalMs })
@@ -1088,9 +1098,16 @@ export class PairDashboardCollector {
       name: this.config.chain.name,
       nativeCurrency: { name: 'Ether', symbol: 'ETH', decimals: 18 },
       rpcUrls: { default: { http: [this.rpcUrl] } },
+      contracts: { multicall3: { address: MULTICALL3_ADDRESS, blockCreated: 0 } },
     })
     this.client = createPublicClient({
       chain,
+      batch: {
+        multicall: {
+          batchSize: this.rpcMulticallBatchBytes,
+          wait: this.rpcMulticallWaitMs,
+        },
+      },
       transport: http(undefined, {
         batch: { batchSize: this.rpcBatchSize, wait: this.rpcBatchWaitMs },
         fetchFn: (input, init) => this.rpcGate(() => this.rpcFetchFn(input, init)),

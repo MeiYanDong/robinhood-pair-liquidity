@@ -12,4 +12,5 @@
 - Lowered the public-RPC cadence to one minute after a 30-second production soak still throttled, and distinguish fresh-but-degraded snapshots from genuinely stale data.
 - Require every restarted dashboard process to publish one successful current-process snapshot before readiness can pass.
 - Give deployment readiness two full one-minute refresh opportunities before the installer reports failure.
+- Aggregate concurrent contract reads through the verified Robinhood Chain Multicall3 deployment before they reach the rate-limited public RPC.
 - Added lint, formatting, scoped JavaScript type checks, tests, CI, an ADR, and an operation tech spec.
