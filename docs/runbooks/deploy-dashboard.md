@@ -25,7 +25,8 @@
 1. 确认 systemd 与 Nginx 均为 `active` 且 `enabled`。
    同时确认当前 release 的 `GIT_COMMIT` 与已通过 CI 的主分支提交完全一致。
 2. 检查公网 `/livez`、`/readyz`、`/api/portfolio` 和首页；`/readyz` 必须显示 `ready: true`。
-   连续观察至少三个 30 秒刷新周期，确认安全区块持续前进且 journal 没有 RPC 失败循环。
+   新进程必须至少成功生成一次自己的安全区块快照，不能仅凭重启前留下的快照通过门禁。
+   连续观察至少三个 60 秒刷新周期，确认安全区块持续前进且 journal 没有 RPC 失败循环。
 3. 对比本地与公网 `dashboard/public/app.js` 的 SHA-256。
 4. 核对变更涉及 NFT 的 owner、liquidity、区间、总账状态与安全区块。
 5. 从服务器删除一次性 SSH 公钥，删除本地临时私钥，并以新连接被拒绝作为回读证据。

@@ -13,7 +13,7 @@ const installer = fs.readFileSync(
 )
 
 test('production service uses the rate-limit-safe refresh contract', () => {
-  assert.match(service, /^Environment=PAIR_DASHBOARD_REFRESH_MS=30000$/m)
+  assert.match(service, /^Environment=PAIR_DASHBOARD_REFRESH_MS=60000$/m)
   assert.match(service, /^Environment=PAIR_DASHBOARD_RETRIES=0$/m)
 })
 
