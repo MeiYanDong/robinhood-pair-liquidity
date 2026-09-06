@@ -14,7 +14,8 @@
 
 ## 发布
 
-1. 创建带时间戳的发布包，不包含 `.env`、私钥、RPC URL、`node_modules`、执行中间态或未脱敏日志。
+1. 创建带时间戳的发布包，根目录必须包含与 GitHub 主分支一致的 40 位 `GIT_COMMIT`；
+   不包含 `.env`、私钥、RPC URL、`node_modules`、执行中间态或未脱敏日志。
 2. 通过 Cloud Assistant 临时安装一次性 SSH 公钥。
 3. 上传发布包后运行 `dashboard/deploy/install-release.sh <release-dir>`。脚本会原子切换
    `current` 软链接，并等待 `/readyz` 成功。
@@ -22,6 +23,7 @@
 ## 发布后验证
 
 1. 确认 systemd 与 Nginx 均为 `active` 且 `enabled`。
+   同时确认当前 release 的 `GIT_COMMIT` 与已通过 CI 的主分支提交完全一致。
 2. 检查公网 `/livez`、`/readyz`、`/api/portfolio` 和首页；`/readyz` 必须显示 `ready: true`。
    连续观察至少三个 30 秒刷新周期，确认安全区块持续前进且 journal 没有 RPC 失败循环。
 3. 对比本地与公网 `dashboard/public/app.js` 的 SHA-256。

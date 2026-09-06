@@ -16,6 +16,15 @@ if [[ ! -s /etc/pair-liquidity-dashboard.env ]]; then
   echo "/etc/pair-liquidity-dashboard.env is missing" >&2
   exit 1
 fi
+if [[ ! -s ${release_source}/GIT_COMMIT ]]; then
+  echo "${release_source}/GIT_COMMIT is missing" >&2
+  exit 1
+fi
+release_commit=$(tr -d '\n' < "${release_source}/GIT_COMMIT")
+if [[ ! ${release_commit} =~ ^[0-9a-f]{40}$ ]]; then
+  echo "GIT_COMMIT must contain one lowercase 40-character Git SHA" >&2
+  exit 1
+fi
 
 release_id=$(date -u +%Y%m%dT%H%M%SZ)
 release_dir=/opt/pair-liquidity-dashboard/releases/${release_id}
@@ -26,6 +35,7 @@ install -d -o pairdash -g pairdash -m 0750 /var/lib/pair-liquidity-dashboard
 install -d -o root -g root -m 0755 "${release_dir}"
 
 cp -a "${release_source}/dashboard" "${release_dir}/dashboard"
+install -o root -g root -m 0644 "${release_source}/GIT_COMMIT" "${release_dir}/GIT_COMMIT"
 cd "${release_dir}/dashboard"
 npm ci --omit=dev --ignore-scripts --no-audit --no-fund
 chown -R root:root "${release_dir}"
