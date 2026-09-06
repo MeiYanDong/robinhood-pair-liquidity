@@ -1078,6 +1078,7 @@ export class PairDashboardCollector {
     this.rpcMinimumIntervalMs = finiteSetting(rpcMinimumIntervalMs ?? this.config.chain.rpcMinimumIntervalMs, 150, 0)
     this.rpcBatchSize = finiteSetting(rpcBatchSize ?? this.config.chain.rpcBatchSize, 20, 1, true)
     this.rpcBatchWaitMs = finiteSetting(rpcBatchWaitMs ?? this.config.chain.rpcBatchWaitMs, 25, 0)
+    this.rpcMethodConcurrency = this.rpcBatchSize
     this.rpcFetchFn = rpcFetchFn
     this.rpcGate = createRpcRequestGate({ minimumIntervalMs: this.rpcMinimumIntervalMs })
     this.onProgress = onProgress
@@ -1289,7 +1290,7 @@ export class PairDashboardCollector {
     const words = []
     for (let word = minWord; word <= maxWord; word += 1) words.push(word)
 
-    const bitmaps = await mapWithConcurrency(words, 4, async (word) => ({
+    const bitmaps = await mapWithConcurrency(words, this.rpcMethodConcurrency, async (word) => ({
       word,
       bitmap: await this.client.readContract({
         address: this.stateView,
@@ -1307,7 +1308,7 @@ export class PairDashboardCollector {
         if (tick >= minTick && tick <= maxTick) ticks.push(tick)
       }
     }
-    return mapWithConcurrency(ticks, 8, async (tick) => {
+    return mapWithConcurrency(ticks, this.rpcMethodConcurrency, async (tick) => {
       const [gross, net] = await this.client.readContract({
         address: this.stateView,
         abi: STATE_VIEW_ABI,
@@ -1464,7 +1465,11 @@ export class PairDashboardCollector {
   async readPortfolioChainStates(detailedPositions, blockNumber) {
     if (!this.portfolioManifest) return []
     const detailById = new Map(detailedPositions.map((position) => [String(position.tokenId), position]))
-    return mapWithConcurrency(this.portfolioManifest.positions, 4, async (position) => {
+    // Each lifecycle item queues ownerOf and getPositionLiquidity together. Keep
+    // the combined method count within one configured JSON-RPC batch while
+    // avoiding the many small HTTP requests produced by a fixed worker count.
+    const lifecycleConcurrency = Math.max(1, Math.floor(this.rpcMethodConcurrency / 2))
+    return mapWithConcurrency(this.portfolioManifest.positions, lifecycleConcurrency, async (position) => {
       const detailed = detailById.get(String(position.tokenId))
       if (detailed) {
         return {

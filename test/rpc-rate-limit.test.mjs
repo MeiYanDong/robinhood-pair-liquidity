@@ -86,3 +86,40 @@ test('collector batches concurrent JSON-RPC methods into one HTTP request', asyn
     fs.rmSync(temporaryDirectory, { force: true, recursive: true })
   }
 })
+
+test('lifecycle audit fills one RPC batch without exceeding its method budget', async () => {
+  const temporaryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'pair-rpc-lifecycle-'))
+  const collector = new PairDashboardCollector({
+    configPath: CONFIG_PATH,
+    databasePath: path.join(temporaryDirectory, 'history.sqlite'),
+    rpcUrl: 'https://rpc.invalid.example',
+    rpcBatchSize: 20,
+  })
+  collector.portfolioManifest = {
+    positions: Array.from({ length: 10 }, (_, index) => ({ tokenId: String(index + 1) })),
+  }
+  let outstanding = 0
+  let maximumOutstanding = 0
+  collector.client = {
+    async readContract({ functionName }) {
+      outstanding += 1
+      maximumOutstanding = Math.max(maximumOutstanding, outstanding)
+      await new Promise((resolve) => setTimeout(resolve, 5))
+      outstanding -= 1
+      return functionName === 'ownerOf' ? collector.wallet : 1n
+    },
+  }
+
+  try {
+    const states = await collector.readPortfolioChainStates([], 1n)
+    assert.equal(states.length, 10)
+    assert.equal(
+      states.every((state) => state.status === 'active'),
+      true,
+    )
+    assert.equal(maximumOutstanding, 20)
+  } finally {
+    collector.close()
+    fs.rmSync(temporaryDirectory, { force: true, recursive: true })
+  }
+})

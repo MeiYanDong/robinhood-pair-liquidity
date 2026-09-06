@@ -4,7 +4,7 @@
     "id": 4663,
     "name": "Robinhood Chain",
     "defaultRpcUrl": "https://rpc.mainnet.chain.robinhood.com",
-    "rpcMinimumIntervalMs": 150,
+    "rpcMinimumIntervalMs": 200,
     "rpcBatchSize": 20,
     "rpcBatchWaitMs": 25,
     "confirmations": 128
