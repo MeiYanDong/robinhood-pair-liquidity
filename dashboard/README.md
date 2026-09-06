@@ -69,9 +69,11 @@ Node.js 22 或更高版本：
 RH_RPC_URL='private-robinhood-rpc' npm run dashboard
 ```
 
-默认为所有 RPC 请求共享 `150ms` 的最小发起间隔，避免快照构建的并发读取击穿公共节点
-限流。只有当专用 RPC 有明确的更高限额时，才应通过
-`PAIR_DASHBOARD_RPC_MIN_INTERVAL_MS` 调低该值。
+并发的链上读取默认先在 `25ms` 内合并为最多 20 条 JSON-RPC 的批次，再为实际 HTTP
+请求共享 `150ms` 的最小发起间隔，避免快照构建的并发读取击穿公共节点限流，同时
+不把每个合约读取串行化。只有当专用 RPC 有明确的更高限额时，才应通过
+`PAIR_DASHBOARD_RPC_MIN_INTERVAL_MS`、`PAIR_DASHBOARD_RPC_BATCH_SIZE` 和
+`PAIR_DASHBOARD_RPC_BATCH_WAIT_MS` 调整这些值。
 
 生产面板有自己的最小依赖清单 `dashboard/package.json`，只安装 `viem`。仓位本金使用与
 Uniswap SDK 逐 wei 对照过的 TickMath 公式，服务器不安装交易执行器、Hardhat 或 Solc。

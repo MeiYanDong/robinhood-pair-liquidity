@@ -29,6 +29,12 @@ const BLOCK_BATCH_PAUSE_MS = 600
 const RPC_READ_ATTEMPTS = 6
 const SYNC_CHUNK_PAUSE_MS = 250
 
+function finiteSetting(value, fallback, minimum, integer = false) {
+  const numeric = Number(value)
+  if (!Number.isFinite(numeric) || numeric < minimum) return fallback
+  return integer ? Math.trunc(numeric) : numeric
+}
+
 export function createRpcRequestGate({
   minimumIntervalMs = 0,
   now = () => Date.now(),
@@ -46,18 +52,6 @@ export function createRpcRequestGate({
     })
     schedule = ready.catch(() => {})
     return ready.then(operation)
-  }
-}
-
-function gatedTransport(transport, gate) {
-  return (options) => {
-    const instance = transport(options)
-    return {
-      ...instance,
-      request(parameters) {
-        return gate(() => instance.request(parameters))
-      },
-    }
   }
 }
 
@@ -1066,15 +1060,25 @@ export function allocateDirectSwapToBins(
 }
 
 export class PairDashboardCollector {
-  constructor({ configPath, databasePath, rpcUrl, confirmations, rpcMinimumIntervalMs, onProgress = () => {} }) {
+  constructor({
+    configPath,
+    databasePath,
+    rpcUrl,
+    confirmations,
+    rpcMinimumIntervalMs,
+    rpcBatchSize,
+    rpcBatchWaitMs,
+    rpcFetchFn = fetch,
+    onProgress = () => {},
+  }) {
     this.configPath = configPath
     this.config = JSON.parse(fs.readFileSync(configPath, 'utf8'))
     this.rpcUrl = rpcUrl || this.config.chain.defaultRpcUrl
     this.confirmations = BigInt(confirmations ?? this.config.chain.confirmations ?? 3)
-    this.rpcMinimumIntervalMs = Math.max(
-      0,
-      Number(rpcMinimumIntervalMs ?? this.config.chain.rpcMinimumIntervalMs ?? 150),
-    )
+    this.rpcMinimumIntervalMs = finiteSetting(rpcMinimumIntervalMs ?? this.config.chain.rpcMinimumIntervalMs, 150, 0)
+    this.rpcBatchSize = finiteSetting(rpcBatchSize ?? this.config.chain.rpcBatchSize, 20, 1, true)
+    this.rpcBatchWaitMs = finiteSetting(rpcBatchWaitMs ?? this.config.chain.rpcBatchWaitMs, 25, 0)
+    this.rpcFetchFn = rpcFetchFn
     this.rpcGate = createRpcRequestGate({ minimumIntervalMs: this.rpcMinimumIntervalMs })
     this.onProgress = onProgress
 
@@ -1086,7 +1090,12 @@ export class PairDashboardCollector {
     })
     this.client = createPublicClient({
       chain,
-      transport: gatedTransport(http(undefined, { timeout: 30_000, retryCount: 3 }), this.rpcGate),
+      transport: http(undefined, {
+        batch: { batchSize: this.rpcBatchSize, wait: this.rpcBatchWaitMs },
+        fetchFn: (input, init) => this.rpcGate(() => this.rpcFetchFn(input, init)),
+        timeout: 30_000,
+        retryCount: 3,
+      }),
     })
     this.wallet = getAddress(this.config.wallet)
     this.poolManager = getAddress(this.config.contracts.poolManager)
