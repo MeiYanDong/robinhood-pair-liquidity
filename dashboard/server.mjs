@@ -57,6 +57,8 @@ const collector = new PairDashboardCollector({
   rpcUrl: process.env.RH_RPC_URL,
   confirmations: process.env.PAIR_DASHBOARD_CONFIRMATIONS,
   rpcMinimumIntervalMs: process.env.PAIR_DASHBOARD_RPC_MIN_INTERVAL_MS,
+  rpcBatchSize: process.env.PAIR_DASHBOARD_RPC_BATCH_SIZE,
+  rpcBatchWaitMs: process.env.PAIR_DASHBOARD_RPC_BATCH_WAIT_MS,
   onProgress(progress) {
     runtime.progress = { ...progress, at: new Date().toISOString() }
   },
