@@ -159,7 +159,7 @@ function setStatus(runtime) {
   const className =
     normalized === 'LIVE'
       ? 'status-live'
-      : normalized === 'STALE'
+      : normalized === 'STALE' || normalized === 'DEGRADED'
         ? 'status-stale'
         : normalized === 'ERROR'
           ? 'status-error'

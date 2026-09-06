@@ -14,7 +14,7 @@ const DB_PATH = path.resolve(process.env.PAIR_DASHBOARD_DB || path.join(STATE_DI
 const SNAPSHOT_PATH = path.resolve(process.env.PAIR_DASHBOARD_SNAPSHOT || path.join(STATE_DIR, 'latest.json'))
 const PORT = Number(process.env.PAIR_DASHBOARD_PORT || 8080)
 const HOST = process.env.PAIR_DASHBOARD_HOST || '127.0.0.1'
-const REFRESH_MS = Math.max(5_000, Number(process.env.PAIR_DASHBOARD_REFRESH_MS || 30_000))
+const REFRESH_MS = Math.max(5_000, Number(process.env.PAIR_DASHBOARD_REFRESH_MS || 60_000))
 // The transport already retries individual RPC requests. Re-running the whole
 // snapshot immediately after a public-RPC throttle multiplies load and delays
 // recovery, so the default is to preserve the last good snapshot and wait for
@@ -29,6 +29,7 @@ const runtime = {
   startedAt: new Date().toISOString(),
   lastAttemptAt: null,
   lastSuccessAt: null,
+  hasSucceededSinceStart: false,
   lastError: null,
   progress: { phase: 'startup', message: '等待首次链上快照' },
   refreshMs: REFRESH_MS,
@@ -87,6 +88,7 @@ async function refresh() {
         runtime.snapshot = snapshot
         runtime.status = 'LIVE'
         runtime.lastSuccessAt = new Date().toISOString()
+        runtime.hasSucceededSinceStart = true
         runtime.progress = {
           phase: 'ready',
           message: `安全区块 ${snapshot.pool.blockNumber} 已发布`,
@@ -162,7 +164,12 @@ function sendJson(response, statusCode, body, extraHeaders = {}) {
 
 function publicRuntime() {
   const generatedAt = runtime.snapshot?.generatedAt
-  const evaluated = evaluateRuntimeStatus({ status: runtime.status, generatedAt, refreshMs: REFRESH_MS })
+  const evaluated = evaluateRuntimeStatus({
+    status: runtime.status,
+    generatedAt,
+    refreshMs: REFRESH_MS,
+    hasSucceededSinceStart: runtime.hasSucceededSinceStart,
+  })
   return {
     service: runtime.service,
     status: evaluated.status,
