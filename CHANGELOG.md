@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-09-07
+
+- Rebuilt the public lifecycle manifest at safe block `56528875`, reconciling all `22/22` wallet NFTs with no missing local or on-chain IDs.
+- Added externally completed NFT `2073305` and the five receipt-backed collect, rebalance, and compound transactions that increased NFT `1936443` liquidity from `317696387997582734044` to `458159458353467559856`.
+- Advanced the public ledger to `136` canonical transaction receipts and `54` recorded fee claims while preserving the existing partial-capital and partial-fee attribution boundaries.
+
 ## 2026-09-06
 
 - Consolidated PAIR/SPY NFT `2006287` into existing NFT `2008008` with an exact wallet PAIR cap.
