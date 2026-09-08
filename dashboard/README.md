@@ -2,7 +2,7 @@
 
 这是一个只读服务：它不加载钱包、不读取私钥、不签名，也没有交易入口。服务固定在
 Robinhood Chain 的安全区块上读取 PAIR/SPY、PAIR/USDG 池、钱包全部历史 LP NFT 与现货余额，
-并把增量 Swap 历史保存到 SQLite。网页每 5 秒拉取一次服务状态；服务默认每 15 秒追块，
+并把增量 Swap 历史保存到 SQLite。网页每 5 秒拉取一次服务状态；服务默认每 60 秒追块，
 快照落后链头 128 个块，以避开高出块频率下的节点同步抖动和短重组。
 
 面板同时读取 PAIR/USDG 1% 与 3% 两个候选池，以我们当前本金和四个美元价格区间做
@@ -40,7 +40,10 @@ feeGrowth；它们不会混入“同本金候选模拟仓”的比较口径。
   时段固定标为 `PARTIAL`；缺少入场或退出资产证据时固定标为 `UNKNOWN`，不会用现价倒填。
 - RPC 读取会短退避重试；持续失败时继续发布最后一份有效快照，并把状态明确标为
   `STALE`，不会伪装成实时。
-- 新建、迁移或永久退出 LP 后，先重建生命周期清单，再发布新的只读 manifest。
+- 新建、迁移或永久退出 LP 后，服务会增量读取 PositionManager `Transfer`，再以同一安全区块
+  的 `balanceOf`、`ownerOf`、liquidity 和 pool info 做闭环核验；不再需要 Codex 手工更新面板。
+- 自动发现但尚未进入审计账本的 NFT 会立即显示当前链上状态，但成本来源固定标为
+  `UNKNOWN_EXTERNAL_ORIGIN`，直到公开账本补齐证据，避免把未知本金误算成手续费或零成本。
 
 ## 生命周期账本
 
@@ -85,6 +88,8 @@ npm run dashboard:check
 curl http://127.0.0.1:8080/livez
 curl http://127.0.0.1:8080/readyz
 curl 'http://127.0.0.1:8080/api/snapshot?window=24h'
+curl http://127.0.0.1:8080/api/inventory
+curl http://127.0.0.1:8080/api/trend
 curl http://127.0.0.1:8080/api/portfolio
 ```
 

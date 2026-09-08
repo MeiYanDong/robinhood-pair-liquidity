@@ -1,0 +1,302 @@
+[
+  {
+    "id": "01-no-breakout-hold",
+    "overrides": { "crossedUpper": false, "nearUpper": false },
+    "expectedAction": "HOLD"
+  },
+  {
+    "id": "02-near-upper-prepare-only",
+    "overrides": { "crossedUpper": false, "nearUpper": true },
+    "expectedAction": "PREPARE_UNSIGNED_PLAN"
+  },
+  {
+    "id": "03-small-wick",
+    "overrides": { "breakoutPct": 0.2 },
+    "expectedAction": "WAIT_CONFIRMATION"
+  },
+  {
+    "id": "04-too-few-confirmation-blocks",
+    "overrides": { "confirmationBlocks": 2 },
+    "expectedAction": "WAIT_CONFIRMATION"
+  },
+  {
+    "id": "05-too-little-time-above-upper",
+    "overrides": { "secondsAboveUpper": 30 },
+    "expectedAction": "WAIT_CONFIRMATION"
+  },
+  {
+    "id": "06-weak-volume",
+    "overrides": { "volumeMultiple": 1.2 },
+    "expectedAction": "WAIT_CONFIRMATION"
+  },
+  {
+    "id": "07-weak-net-buy-flow",
+    "overrides": { "netBuySharePct": 51 },
+    "expectedAction": "WAIT_CONFIRMATION"
+  },
+  {
+    "id": "08-existing-higher-band-covers-breakout",
+    "overrides": { "existingHigherBandCoverage": true, "activeCoverageLossPct": 40 },
+    "expectedAction": "HOLD_COVERED"
+  },
+  {
+    "id": "09-target-not-qualified",
+    "overrides": { "targetQualified": false },
+    "expectedAction": "RESCAN_NO_TRADE"
+  },
+  {
+    "id": "10-normal-roll-cheap",
+    "overrides": {},
+    "expectedAction": "NORMAL_ROLL"
+  },
+  {
+    "id": "11-normal-roll-gas-above-five-does-not-wait",
+    "overrides": { "gasUsdg": 5.01 },
+    "expectedAction": "NORMAL_ROLL"
+  },
+  {
+    "id": "12-normal-roll-has-no-fee-payback-gate",
+    "overrides": { "gasUsdg": 4, "frictionUsdg": 3 },
+    "expectedAction": "NORMAL_ROLL"
+  },
+  {
+    "id": "13-strong-breakout-urgent-roll",
+    "overrides": {
+      "breakoutPct": 4,
+      "confirmationBlocks": 1,
+      "secondsAboveUpper": 10,
+      "volumeMultiple": 3,
+      "netBuySharePct": 70,
+      "gasUsdg": 6,
+      "frictionUsdg": 1
+    },
+    "expectedAction": "URGENT_ROLL"
+  },
+  {
+    "id": "14-strong-breakout-six-dollar-gas-does-not-wait",
+    "overrides": {
+      "breakoutPct": 4,
+      "confirmationBlocks": 1,
+      "secondsAboveUpper": 10,
+      "volumeMultiple": 3,
+      "netBuySharePct": 70,
+      "gasUsdg": 6,
+      "frictionUsdg": 1
+    },
+    "expectedAction": "URGENT_ROLL"
+  },
+  {
+    "id": "15-strong-breakout-seven-dollar-gas-does-not-wait",
+    "overrides": {
+      "breakoutPct": 4,
+      "confirmationBlocks": 1,
+      "secondsAboveUpper": 10,
+      "volumeMultiple": 3,
+      "netBuySharePct": 70,
+      "gasUsdg": 7
+    },
+    "expectedAction": "URGENT_ROLL"
+  },
+  {
+    "id": "16-strong-breakout-twelve-dollar-gas-does-not-wait",
+    "overrides": {
+      "breakoutPct": 4,
+      "confirmationBlocks": 1,
+      "secondsAboveUpper": 10,
+      "volumeMultiple": 3,
+      "netBuySharePct": 70,
+      "gasUsdg": 12,
+      "frictionUsdg": 2
+    },
+    "expectedAction": "URGENT_ROLL"
+  },
+  {
+    "id": "17-strong-breakout-sixteen-dollar-gas-does-not-wait",
+    "overrides": {
+      "breakoutPct": 4,
+      "confirmationBlocks": 1,
+      "secondsAboveUpper": 10,
+      "volumeMultiple": 3,
+      "netBuySharePct": 70,
+      "gasUsdg": 16
+    },
+    "expectedAction": "URGENT_ROLL"
+  },
+  {
+    "id": "18-strong-breakout-twenty-four-dollar-gas-below-anomaly-cap",
+    "overrides": {
+      "breakoutPct": 4,
+      "confirmationBlocks": 1,
+      "secondsAboveUpper": 10,
+      "volumeMultiple": 3,
+      "netBuySharePct": 70,
+      "gasUsdg": 24,
+      "frictionUsdg": 1
+    },
+    "expectedAction": "URGENT_ROLL"
+  },
+  {
+    "id": "19-strong-breakout-absolute-cap",
+    "overrides": {
+      "breakoutPct": 4,
+      "confirmationBlocks": 1,
+      "secondsAboveUpper": 10,
+      "volumeMultiple": 3,
+      "netBuySharePct": 70,
+      "gasUsdg": 26
+    },
+    "expectedAction": "WAIT_GAS"
+  },
+  {
+    "id": "20-two-bands-skipped-one-wide-catch-up",
+    "overrides": { "skippedBands": 2, "gasUsdg": 8, "frictionUsdg": 2 },
+    "expectedAction": "ONE_WIDE_CATCH_UP_TRANCHE"
+  },
+  {
+    "id": "21-three-bands-skipped-gas-does-not-delay-catch-up",
+    "overrides": { "skippedBands": 3, "gasUsdg": 20, "frictionUsdg": 2 },
+    "expectedAction": "ONE_WIDE_CATCH_UP_TRANCHE"
+  },
+  {
+    "id": "22-cooldown-prevents-churn",
+    "overrides": { "cooldownActive": true },
+    "expectedAction": "HOLD_COOLDOWN"
+  },
+  {
+    "id": "23-incomplete-portfolio-fails-closed",
+    "overrides": { "portfolioComplete": false },
+    "expectedAction": "DEGRADED_HALT_NEW_RISK"
+  },
+  {
+    "id": "24-stale-snapshot-fails-closed",
+    "overrides": { "snapshotFresh": false },
+    "expectedAction": "DEGRADED_HALT_NEW_RISK"
+  },
+  {
+    "id": "25-rpc-divergence-fails-closed",
+    "overrides": { "rpcConsistent": false },
+    "expectedAction": "DEGRADED_HALT_NEW_RISK"
+  },
+  {
+    "id": "26-unknown-receipt-reconcile-first",
+    "overrides": { "receiptUnknown": true },
+    "expectedAction": "RECONCILE_ONLY"
+  },
+  {
+    "id": "27-pending-nonce-reconcile-first",
+    "overrides": { "pendingNonce": true },
+    "expectedAction": "RECONCILE_ONLY"
+  },
+  {
+    "id": "28-risk-exit-five-dollar-gas-does-not-wait",
+    "overrides": {
+      "reversalConfirmed": true,
+      "gasUsdg": 5,
+      "frictionUsdg": 1,
+      "exitPriceImpactPct": 1
+    },
+    "expectedAction": "RISK_EXIT"
+  },
+  {
+    "id": "29-risk-exit-eighteen-dollar-gas-does-not-wait",
+    "overrides": {
+      "reversalConfirmed": true,
+      "gasUsdg": 18,
+      "frictionUsdg": 2,
+      "exitPriceImpactPct": 1
+    },
+    "expectedAction": "RISK_EXIT"
+  },
+  {
+    "id": "30-risk-exit-no-fee-or-loss-payback-gate",
+    "overrides": {
+      "reversalConfirmed": true,
+      "gasUsdg": 9,
+      "frictionUsdg": 1,
+      "exitPriceImpactPct": 1
+    },
+    "expectedAction": "RISK_EXIT"
+  },
+  {
+    "id": "31-risk-exit-small-avoidable-loss-still-does-not-wait",
+    "overrides": {
+      "reversalConfirmed": true,
+      "gasUsdg": 9,
+      "frictionUsdg": 1,
+      "exitPriceImpactPct": 1
+    },
+    "expectedAction": "RISK_EXIT"
+  },
+  {
+    "id": "32-risk-exit-absolute-cap-rejected",
+    "overrides": {
+      "reversalConfirmed": true,
+      "gasUsdg": 30,
+      "frictionUsdg": 1,
+      "exitPriceImpactPct": 1
+    },
+    "expectedAction": "WAIT_ALERT"
+  },
+  {
+    "id": "33-high-impact-withdraw-first",
+    "overrides": {
+      "reversalConfirmed": true,
+      "gasUsdg": 8,
+      "withdrawGasUsdg": 3,
+      "exitPriceImpactPct": 5
+    },
+    "expectedAction": "WITHDRAW_THEN_DEPTH_AWARE_EXIT"
+  },
+  {
+    "id": "34-high-impact-withdraw-thirteen-dollar-gas-does-not-wait",
+    "overrides": {
+      "reversalConfirmed": true,
+      "gasUsdg": 15,
+      "withdrawGasUsdg": 13,
+      "exitPriceImpactPct": 5
+    },
+    "expectedAction": "WITHDRAW_THEN_DEPTH_AWARE_EXIT"
+  },
+  {
+    "id": "35-reversal-with-pending-nonce-still-reconciles-first",
+    "overrides": {
+      "reversalConfirmed": true,
+      "pendingNonce": true,
+      "gasUsdg": 4,
+      "exitPriceImpactPct": 1
+    },
+    "expectedAction": "RECONCILE_ONLY"
+  },
+  {
+    "id": "36-strong-breakout-covered-below-loss-threshold",
+    "overrides": {
+      "breakoutPct": 4,
+      "confirmationBlocks": 1,
+      "secondsAboveUpper": 10,
+      "volumeMultiple": 3,
+      "netBuySharePct": 70,
+      "existingHigherBandCoverage": true,
+      "activeCoverageLossPct": 49
+    },
+    "expectedAction": "HOLD_COVERED"
+  },
+  {
+    "id": "37-strong-breakout-existing-band-insufficient",
+    "overrides": {
+      "breakoutPct": 4,
+      "confirmationBlocks": 1,
+      "secondsAboveUpper": 10,
+      "volumeMultiple": 3,
+      "netBuySharePct": 70,
+      "existingHigherBandCoverage": true,
+      "activeCoverageLossPct": 60,
+      "gasUsdg": 6
+    },
+    "expectedAction": "URGENT_ROLL"
+  },
+  {
+    "id": "38-normal-roll-exact-five-dollar-gas",
+    "overrides": { "gasUsdg": 5, "frictionUsdg": 1 },
+    "expectedAction": "NORMAL_ROLL"
+  }
+]

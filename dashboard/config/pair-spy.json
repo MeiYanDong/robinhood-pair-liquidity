@@ -120,8 +120,18 @@
     "low": 0.007,
     "high": 0.008
   },
+  "trendModel": {
+    "targetPriceWidthUsdg": 0.01,
+    "targetWidthTolerancePct": 20,
+    "widthMultipliers": [0.8, 1, 1.2, 1.5],
+    "upsideRoomShares": [0.7, 0.8, 0.9, 1],
+    "referenceLiquidityBps": 2500,
+    "volumeAccelerationThreshold": 1.5,
+    "pairBuyShareThresholdPct": 60
+  },
   "portfolio": {
-    "manifest": "lp-portfolio-ledger.json"
+    "manifest": "lp-portfolio-ledger.json",
+    "inventoryLogChunk": 50000
   },
   "positions": [
     {

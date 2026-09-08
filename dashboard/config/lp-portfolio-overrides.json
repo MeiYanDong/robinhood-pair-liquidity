@@ -17,9 +17,12 @@
     "1871913": { "label": "已撤当前热区补足", "role": "retired-current-band" },
     "1908663": { "label": "高位续航仓", "role": "high-band-extension" },
     "1983646": { "label": "高位单边仓", "role": "upper-single-sided" },
+    "1987316": { "label": "已撤高位单边仓", "role": "retired-upper-single-sided" },
     "1988669": { "label": "中高位主仓", "role": "upper-core" },
     "2006287": { "label": "已撤高位接力仓", "role": "retired-upper-extension" },
-    "2008008": { "label": "高位补隙主仓", "role": "upper-gap-fill" }
+    "2008008": { "label": "已撤高位补隙主仓", "role": "retired-upper-gap-fill" },
+    "2096314": { "label": "回调再平衡主仓", "role": "rebased-main" },
+    "2117000": { "label": "回撤承接仓", "role": "lower-rebased" }
   },
   "manualPositions": [
     {
@@ -75,9 +78,58 @@
       "source": "decoded_position_manager_mint_plus_receipt_wallet_delta",
       "quality": "verified_wallet_delta",
       "note": "Token quantities are exact from the receipt; the USDG mark is a nearby preflight observation because the public RPC does not serve the historical eth_call at this block."
+    },
+    {
+      "tokenId": "1983646",
+      "id": "manual-ui-increase-1983646-55630699",
+      "kind": "increase",
+      "at": "2026-09-06T02:45:26.000Z",
+      "blockNumber": "55630699",
+      "transactionHash": "0x53ef72354161f706152466c39cc4cc412ba355efda703956962c290b3fc3bf33",
+      "amounts": { "spy": 0.014165593376437873, "pair": 12873.917002179114 },
+      "mark": {
+        "spyUsdg": 773.8405391433398,
+        "pairUsdg": 0.024809794012683756,
+        "quality": "nearest_prior_canonical_pool_swaps"
+      },
+      "source": "decoded_modify_liquidity_delta_plus_canonical_tick_math",
+      "quality": "derived_total_underlying_added",
+      "note": "Total liquidity input is derived from the canonical ModifyLiquidity delta and nearest prior pool sqrt price; wallet spend was 0.002991078473955491 SPY + 12551.422833333709106264 PAIR and the remainder was same-position accrued-fee credit."
+    },
+    {
+      "tokenId": "1987316",
+      "id": "manual-ui-mint-1987316",
+      "kind": "mint",
+      "at": "2026-09-06T03:34:35.000Z",
+      "blockNumber": "55659946",
+      "transactionHash": "0x682e1a34accbb01a7bfd70a971815167287a2e2897747abe8e8de541fbd4cf25",
+      "amounts": { "spy": 0, "pair": 3130.3005227071885 },
+      "mark": {
+        "spyUsdg": 773.8012658000083,
+        "pairUsdg": 0.03570424319741244,
+        "quality": "nearest_prior_canonical_pool_swaps"
+      },
+      "source": "decoded_modify_liquidity_delta_plus_receipt_wallet_delta",
+      "quality": "verified_single_sided_wallet_delta"
     }
   ],
   "manualExits": [
+    {
+      "tokenId": "1615859",
+      "at": "2026-09-04T15:51:49.000Z",
+      "blockNumber": "54385836",
+      "transactionHash": "0xe9e21074d816fff96e6d13ead95c7c4a52ba5566e0ceba40543c5eacad1b9a73",
+      "grossRaw": { "usdgAtomic": "0", "oneAtomic": "11170058161816984710875" },
+      "terminalFeeRaw": { "usdgAtomic": "0", "oneAtomic": "0" },
+      "mark": {
+        "oneUsdg": 0.0009154017166110287,
+        "quality": "nearest_prior_canonical_swap"
+      },
+      "amountQuality": "verified_receipt_transfer_matches_position_tick_math",
+      "source": "canonical_remove_receipt_plus_tick_math",
+      "quality": "verified_liquidity_zero",
+      "note": "Removal receipt transferred exactly 11170.058161816984710875 $1 to the wallet. TickMath using liquidity 753457878842327 and the nearest prior canonical swap at block 54380432 derives the identical principal; terminal fee is zero."
+    },
     {
       "tokenId": "1762219",
       "at": "2026-09-04T10:27:14.000Z",
@@ -93,6 +145,23 @@
     }
   ],
   "manualFeeClaims": [
+    {
+      "id": "manual-compound-1983646-55630699",
+      "sourceTokenIds": ["1983646"],
+      "targetTokenIds": ["1983646"],
+      "at": "2026-09-06T02:45:26.000Z",
+      "blockNumber": "55630699",
+      "transactionHash": "0x53ef72354161f706152466c39cc4cc412ba355efda703956962c290b3fc3bf33",
+      "amounts": { "spy": 0.011174514902482382, "pair": 322.4941688454046 },
+      "mark": {
+        "spyUsdg": 773.8405391433398,
+        "pairUsdg": 0.024809794012683756,
+        "quality": "nearest_prior_canonical_pool_swaps"
+      },
+      "source": "modify_liquidity_tick_math_minus_exact_receipt_wallet_spend",
+      "allocationQuality": "derived_same_position_fee_credit",
+      "disposition": "reinvested_same_nft"
+    },
     {
       "id": "manual-claim-1762219-54181106",
       "sourceTokenIds": ["1762219"],
@@ -258,6 +327,16 @@
     }
   ],
   "manualTransactions": [
+    {
+      "at": "2026-09-04T15:51:49.000Z",
+      "blockNumber": "54385836",
+      "hash": "0xe9e21074d816fff96e6d13ead95c7c4a52ba5566e0ceba40543c5eacad1b9a73",
+      "label": "外部钱包撤空 NFT 1615859",
+      "status": "success",
+      "gasCostWei": "38382428856000",
+      "action": "remove",
+      "actor": "external_wallet_signer_unknown_to_this_executor"
+    },
     {
       "at": "2026-09-04T10:06:41.000Z",
       "blockNumber": "54181106",
@@ -493,10 +572,28 @@
       "label": "外部钱包撤空 USDG 窄仓、经 SPY 配平后追加高位续航"
     },
     {
+      "from": "1987316",
+      "to": "1988669",
+      "type": "single_sided_roll",
+      "label": "撤空高位单边仓并将本金与已领手续费迁入中高位主仓"
+    },
+    {
       "from": "2006287",
       "to": "2008008",
       "type": "pair_only_consolidation",
       "label": "撤空高位接力仓并将其 PAIR 精确并入高位补隙主仓"
+    },
+    {
+      "from": "2008008",
+      "to": "2096314",
+      "type": "rebased_range_roll",
+      "label": "撤空高位补隙主仓并迁入回调再平衡主仓"
+    },
+    {
+      "from": "1988669",
+      "to": "2117000",
+      "type": "rebased_range_roll",
+      "label": "撤空中高位主仓并迁入回撤承接仓"
     }
   ]
 }

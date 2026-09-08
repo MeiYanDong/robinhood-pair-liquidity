@@ -7,7 +7,7 @@
     <meta name="theme-color" content="#0b0d0c" />
     <title>PAIR / SPY — Live Liquidity Field</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="/styles.css?v=fa611260" />
+    <link rel="stylesheet" href="/styles.css?v=trendinventory0908" />
   </head>
   <body>
     <div class="noise" aria-hidden="true"></div>
@@ -46,6 +46,65 @@
           <strong id="window-volume">—</strong>
           <small id="window-gross-fee">全池费用估算 —</small>
         </article>
+      </section>
+
+      <section class="trend-model-section reveal" aria-labelledby="trend-model-title">
+        <header class="trend-model-header">
+          <div>
+            <p class="section-kicker">Versioned read-only trend model</p>
+            <h2 id="trend-model-title">上行区间雷达</h2>
+          </div>
+          <div class="trend-status-stack">
+            <div id="trend-evidence" class="boundary-pill boundary-partial">MODEL · PARTIAL</div>
+            <strong>Shadow 建议，不会自动交易</strong>
+          </div>
+        </header>
+        <div class="trend-model-grid">
+          <article class="trend-chart-panel">
+            <div class="trend-chart-caption">
+              <span><i class="trend-key-volume"></i>6H 成交热度</span>
+              <span><i class="trend-key-active"></i>现有 LP</span>
+              <span><i class="trend-key-target"></i>模型目标</span>
+              <span><i class="trend-key-next"></i>下一档预备</span>
+            </div>
+            <svg
+              id="trend-chart"
+              class="trend-chart"
+              role="img"
+              aria-label="当前 PAIR 价格、成交热区、现有 LP 与模型建议区间"
+            ></svg>
+          </article>
+          <aside class="trend-readout">
+            <div class="trend-signal-block">
+              <p>模型信号</p>
+              <strong id="trend-signal">等待数据</strong>
+              <small id="trend-copy">基于安全区块生成，只读且不会自动交易。</small>
+            </div>
+            <dl class="trend-stats">
+              <div>
+                <dt>建议区间</dt>
+                <dd id="trend-target">—</dd>
+              </div>
+              <div>
+                <dt>实际宽度 / 偏差</dt>
+                <dd id="trend-width">—</dd>
+              </div>
+              <div>
+                <dt>6H 成交热区 P10–P90</dt>
+                <dd id="trend-hot-band">—</dd>
+              </div>
+              <div>
+                <dt>1H 成交加速 / PAIR 买入占比</dt>
+                <dd id="trend-flow">—</dd>
+              </div>
+            </dl>
+            <div id="trend-candidates" class="trend-candidates" aria-label="区间候选对照"></div>
+          </aside>
+        </div>
+        <p class="trend-model-note">
+          目标宽度是 <b>$0.010 左右</b>的可校准偏好，默认候选约
+          $0.008–$0.012；排名还同时考虑成交量位置、市场流动性竞争和预计份额。模型不是收益承诺，也没有签名或交易权限。
+        </p>
       </section>
 
       <section id="portfolio" class="portfolio-section reveal" aria-labelledby="portfolio-title">
@@ -328,6 +387,6 @@
     </main>
 
     <div id="chart-tooltip" class="chart-tooltip" hidden></div>
-    <script type="module" src="/app.js?v=rpcbudget0906"></script>
+    <script type="module" src="/app.js?v=trendinventory0908"></script>
   </body>
 </html>
