@@ -379,23 +379,23 @@
 - [x] 核对目标仓库为独立 clean clone，没有复制父目录其他项目或私人 `runs/` 数据。
 - [x] 检查 `.gitignore` 覆盖 `.env`、keys、runs、reports、数据库、备份和本地审计材料。
 - [x] 以 dashboard/read-model/tests/docs 最小差异同步，没有复制整个父目录。
-- [ ] 使用清晰提交信息，说明 data/model/dashboard/ops 分层。
-- [ ] 验证 GitHub Actions 真正在目标 commit 上运行，而不是只存在 workflow 文件。
+- [x] 使用清晰提交信息：`feat: auto-discover LPs and visualize trend ranges`，并在 PR #9 说明 data/model/dashboard/ops 与只读边界。
+- [x] 验证 GitHub Actions 真正在目标变更上运行：run `34197017567` 的 `quality` 与 `dashboard-smoke` 均成功。
 
 ### 7.3 服务器部署
 
-- [ ] 备份当前 release 与 SQLite。
-- [ ] 验证备份可读取并记录恢复命令。
-- [ ] 上传无密钥 release。
-- [ ] 运行数据库迁移 dry-run。
-- [ ] 安装并重启只读服务。
-- [ ] 检查 systemd active、PID、最近日志和资源占用。
-- [ ] 检查 `/livez`、`/readyz`、`/healthz`。
-- [ ] 检查 `/api/inventory` 的 balanceOf 对账。
-- [ ] 检查 `/api/trend` 的 `$0.01` 目标宽度、偏差说明和 Shadow-only 标记。
-- [ ] 浏览器验证模型图层与自动更新。
-- [ ] 观察至少两个刷新周期，确认 block、generatedAt、cursor 前进。
-- [ ] 若任一门禁失败，切回上一 release；保留新旧数据库用于调查。
+- [x] 备份旧 release 指针与 SQLite：`/var/backups/pair-liquidity-dashboard/20260908T070119Z`。
+- [x] 备份 SQLite `integrity_check=ok`；恢复步骤记录在部署 runbook。
+- [x] 服务器从公开 GitHub 拉取 CI 后的精确 SHA，不上传密钥、RPC URL 或本地运行目录。
+- [x] 以现有数据库启动新 schema，并通过新表读取、SQLite 完整性和 `/readyz` 门禁；本次是向后兼容建表，无破坏性迁移。
+- [x] 安装 release `20260908T070232Z` 并重启只读服务。
+- [x] 检查 systemd active/running、PID `99683`、`NRestarts=0` 与最近日志；未出现失败循环。
+- [x] 检查 `/livez`、`/readyz`、`/healthz`，`ready=true`。
+- [x] 检查 `/api/inventory`：balance/indexed/verified=`24/24/24`，状态 `VERIFIED`。
+- [x] 检查 `/api/trend`：`pair-trend-range-v3`、价格域宽度/偏差披露、`READ_ONLY_SHADOW`、`executionAuthorized=false`。
+- [x] 浏览器验证模型图层与自动更新，控制台 0 error / 0 warning。
+- [x] 连续观察 3 个刷新周期：安全区块 `57497707 → 57498301 → 57498908`，页面无需 reload。
+- [x] 所有门禁成功，无需回滚；旧 release 与一致性备份均保留。
 
 ### 7.4 生产观察
 
@@ -407,9 +407,9 @@
 
 #### 阶段 7 验收
 
-- [ ] 目标 Git commit、CI run、release id、服务器 readback 可以互相对应。
-- [ ] 线上页面数据更新不依赖手工 JSON/HTML 发布。
-- [ ] 公共服务器没有签名和广播能力。
+- [x] 目标 Git commit `38e30daf...`、CI run `34197017567`、release `20260908T070232Z` 与服务器 readback 可以互相对应。
+- [x] 线上页面数据更新不依赖手工 JSON/HTML 发布；浏览器已跨 3 个安全区块自行更新。
+- [x] 公共服务器只部署 `dashboard/`，模型固定 `executionAuthorized=false`，静态只读契约测试通过。
 
 ## 阶段 8：完整执行路径研究（仍只模拟）
 
@@ -484,18 +484,21 @@
 ### Story C：趋势 API
 
 - [x] 实现 versioned activeTarget/nextTarget/candidates read model；统一状态机 decision 仍属阶段 3.2。
-- [ ] 验收：接口明确显示数据区块、模型版本、宽度和 Shadow-only。
+- [x] 验收：生产接口明确显示数据区块、模型版本、宽度和 Shadow-only。
 
 ### Story D：主图模型图层
 
 - [x] 把市场、当前 LP、主目标、下一目标和热区画在同一 PAIR/USDG 轴上。
-- [ ] 验收：桌面/手机截图与数值 fixture 一致。
+- [x] 验收：桌面/手机浏览器 smoke 与数值 fixture 一致；生产控制台 0 error / 0 warning。
 
 ### Story E：无需 Codex 的生产刷新
 
-- [ ] 部署动态 inventory + model pipeline，完成真实 mint/撤仓 readback。
-- [ ] 验收：不改仓位 JSON、不重新构建 HTML，线上在 SLO 内自动展示变化。
+- [x] 部署动态 inventory + model pipeline；当前 24 个 NFT 已在同一安全区块自动核验。
+- [ ] 等待部署后的下一次自然 mint/转出事件，完成真实事件级 readback（不为测试主动移动资金）。
+- [x] 验收：不改仓位 JSON、不重新构建 HTML，线上跨 3 个安全区块自动刷新现有仓位状态。
 
 ## 当前下一步
 
-Story A–D 的本地实现和门禁已经完成；当前下一步是本地真实 API/浏览器 smoke、Git commit 与 CI、生产备份部署和至少两个刷新周期 readback。完成生产证据前，不把本地结果描述为线上全自动。
+Story A–D 与 Story E 的生产刷新主链路已经完成。当前下一步是 48 小时稳定性观察，并在下一次
+自然 mint/转出发生时验证事件级自动发现；持续 Shadow daemon、通知与任何签名执行仍属于后续
+独立阶段，不在本轮只读发布范围内。
