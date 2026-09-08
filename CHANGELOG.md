@@ -8,6 +8,8 @@
   degradation so a transient rotation cannot falsely take the original portfolio offline.
 - Retry one failed external-strategy inventory reconciliation independently before publishing a `PARTIAL` projection; a
   second failure still degrades honestly without blocking the original portfolio.
+- Retry the narrow same-safe-block NFT balance and position reconciliation once before failing a full snapshot, without
+  replaying its heavier market-history collection.
 - Allow portfolio insight cards to shrink within narrow viewports instead of creating page-level horizontal overflow.
 - Added a persistent PositionManager NFT inventory indexer with canonical `Transfer` cursors, block-hash reorg checks, same-safe-block `balanceOf/ownerOf/liquidity/pool-info` reconciliation, and fail-closed mismatch recovery.
 - Made current PAIR/SPY and PAIR/USDG position sets derive from the runtime inventory instead of a constructor-time static manifest; newly discovered positions remain `UNKNOWN` for cost attribution until audited.

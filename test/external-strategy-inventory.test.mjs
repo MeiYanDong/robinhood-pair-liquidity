@@ -78,9 +78,14 @@ test('external strategy inventory discovers an unconfigured NFT and reconciles i
     number: blockNumber,
     hash: blockNumber === safeBlock.number ? safeBlock.hash : `0x${'77'.repeat(32)}`,
   })
+  let balanceAttempts = 0
   collector.client = {
     async readContract({ functionName }) {
-      if (functionName === 'balanceOf') return 1n
+      if (functionName === 'balanceOf') {
+        balanceAttempts += 1
+        if (balanceAttempts === 1) throw new Error('temporary balanceOf failure')
+        return 1n
+      }
       if (functionName === 'ownerOf') return tracker.wallet
       if (functionName === 'getPositionLiquidity') return 123n
       if (functionName === 'getPoolAndPositionInfo') {
@@ -108,6 +113,7 @@ test('external strategy inventory discovers an unconfigured NFT and reconciles i
     assert.equal(result.states[0].poolId, tracker.pool.poolId)
     assert.equal(result.states[0].tickLower, tickLower)
     assert.equal(result.states[0].tickUpper, tickUpper)
+    assert.equal(balanceAttempts, 2)
     assert.equal(tracker.positionInventory.cursor(), safeBlock.number)
   } finally {
     collector.close()
