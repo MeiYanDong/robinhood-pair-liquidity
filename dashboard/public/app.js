@@ -5,6 +5,7 @@ const state = {
   data: null,
   request: null,
   poll: null,
+  snapshotKey: null,
 }
 
 const elements = {
@@ -20,6 +21,15 @@ const elements = {
   windowVolumeLabel: document.querySelector('#window-volume-label'),
   windowVolume: document.querySelector('#window-volume'),
   windowGrossFee: document.querySelector('#window-gross-fee'),
+  trendEvidence: document.querySelector('#trend-evidence'),
+  trendSignal: document.querySelector('#trend-signal'),
+  trendCopy: document.querySelector('#trend-copy'),
+  trendTarget: document.querySelector('#trend-target'),
+  trendWidth: document.querySelector('#trend-width'),
+  trendHotBand: document.querySelector('#trend-hot-band'),
+  trendFlow: document.querySelector('#trend-flow'),
+  trendCandidates: document.querySelector('#trend-candidates'),
+  trendChart: document.querySelector('#trend-chart'),
   comparisonMethod: document.querySelector('#comparison-method'),
   decisionPanel: document.querySelector('#decision-panel'),
   decisionTitle: document.querySelector('#decision-title'),
@@ -338,6 +348,195 @@ function drawChart(target, bins, options, data) {
   }
 }
 
+function drawTrendModel(data) {
+  const node = elements.trendChart
+  const model = data.trendModel
+  const selection = model?.rangeSelection
+  const selected = selection?.selected
+  const nextTarget = selection?.nextTarget
+  node.replaceChildren()
+  if (!model || !selected) return
+
+  const width = 960
+  const height = 318
+  const margin = { top: 16, right: 22, bottom: 40, left: 24 }
+  const plotWidth = width - margin.left - margin.right
+  const plotHeight = height - margin.top - margin.bottom
+  const volumeTop = 158
+  const volumeBottom = 244
+  const bins = (data.analytics?.bins || []).filter(
+    (bin) => Number(bin.volumeUsdg) > 0 && Number.isFinite(Number(bin.priceMidUsdg)),
+  )
+  const activeRanges = (model.activeRanges || []).filter(
+    (range) => Number.isFinite(range.priceLowUsdg) && Number.isFinite(range.priceHighUsdg),
+  )
+  const prices = [
+    data.pool.pairUsdg,
+    selected.priceLowUsdg,
+    selected.priceHighUsdg,
+    nextTarget?.priceLowUsdg,
+    nextTarget?.priceHighUsdg,
+    selection.hotBand6hUsdg?.p10,
+    selection.hotBand6hUsdg?.p90,
+    ...bins.flatMap((bin) => [bin.priceLowUsdg, bin.priceHighUsdg]),
+    ...activeRanges.flatMap((range) => [range.priceLowUsdg, range.priceHighUsdg]),
+  ].filter(Number.isFinite)
+  if (!prices.length) return
+  const rawLow = Math.min(...prices)
+  const rawHigh = Math.max(...prices)
+  const padding = Math.max((rawHigh - rawLow) * 0.035, 0.0001)
+  const xLow = Math.max(0, rawLow - padding)
+  const xHigh = rawHigh + padding
+  const x = linear(xLow, xHigh, 0, plotWidth)
+  const maxVolume = Math.max(...bins.map((bin) => Number(bin.volumeUsdg)), 1)
+
+  node.setAttribute('viewBox', `0 0 ${width} ${height}`)
+  node.setAttribute('preserveAspectRatio', 'none')
+  const plot = svg('g', { transform: `translate(${margin.left},${margin.top})` })
+  node.append(plot)
+
+  for (let index = 0; index <= 5; index += 1) {
+    const value = xLow + ((xHigh - xLow) * index) / 5
+    const at = x(value)
+    plot.append(svg('line', { class: 'trend-grid-line', x1: at, x2: at, y1: 0, y2: plotHeight }))
+    plot.append(
+      svg(
+        'text',
+        {
+          class: 'trend-axis-label',
+          x: at,
+          y: plotHeight + 25,
+          'text-anchor': index === 0 ? 'start' : index === 5 ? 'end' : 'middle',
+        },
+        `$${value.toFixed(value < 0.1 ? 4 : 3)}`,
+      ),
+    )
+  }
+
+  const hotLow = selection.hotBand6hUsdg?.p10
+  const hotHigh = selection.hotBand6hUsdg?.p90
+  if (Number.isFinite(hotLow) && Number.isFinite(hotHigh)) {
+    plot.append(
+      svg('rect', {
+        class: 'trend-hot-zone',
+        x: x(Math.min(hotLow, hotHigh)),
+        y: volumeTop,
+        width: Math.max(1, x(Math.max(hotLow, hotHigh)) - x(Math.min(hotLow, hotHigh))),
+        height: volumeBottom - volumeTop,
+      }),
+    )
+  }
+
+  const targetLeft = x(selected.priceLowUsdg)
+  const targetRight = x(selected.priceHighUsdg)
+  plot.append(
+    svg('rect', {
+      class: 'trend-target-zone',
+      x: targetLeft,
+      y: 19,
+      width: Math.max(1, targetRight - targetLeft),
+      height: volumeBottom - 19,
+    }),
+  )
+  if (nextTarget) {
+    const nextLeft = x(nextTarget.priceLowUsdg)
+    const nextRight = x(nextTarget.priceHighUsdg)
+    plot.append(
+      svg('rect', {
+        class: 'trend-next-zone',
+        x: nextLeft,
+        y: 27,
+        width: Math.max(1, nextRight - nextLeft),
+        height: volumeBottom - 27,
+      }),
+    )
+  }
+  plot.append(
+    svg(
+      'text',
+      { class: 'trend-target-label', x: targetLeft + 6, y: 34 },
+      `${selection.activeTarget ? 'TARGET' : 'LEADING · NO TRADE'} · $${selected.actualPriceWidthUsdg.toFixed(4)}`,
+    ),
+  )
+
+  const activeRows = activeRanges.slice(0, 8)
+  for (const [index, range] of activeRows.entries()) {
+    const low = Math.max(xLow, range.priceLowUsdg)
+    const high = Math.min(xHigh, range.priceHighUsdg)
+    if (high <= low) continue
+    const y = 52 + index * 11
+    plot.append(svg('line', { class: 'trend-active-line', x1: x(low), x2: x(high), y1: y, y2: y }))
+  }
+
+  const barWidth = Math.max(2, plotWidth / Math.max(bins.length, 1) - 1)
+  for (const bin of bins) {
+    const barHeight = (Number(bin.volumeUsdg) / maxVolume) * (volumeBottom - volumeTop)
+    plot.append(
+      svg('rect', {
+        class: 'trend-volume-bar',
+        x: x(Number(bin.priceMidUsdg)) - barWidth / 2,
+        y: volumeBottom - barHeight,
+        width: barWidth,
+        height: barHeight,
+      }),
+    )
+  }
+
+  const now = x(data.pool.pairUsdg)
+  plot.append(svg('line', { class: 'trend-now-line', x1: now, x2: now, y1: 0, y2: volumeBottom }))
+  plot.append(svg('text', { class: 'trend-now-label', x: now + 5, y: 11 }, 'NOW'))
+}
+
+function renderTrendModel(data) {
+  const model = data.trendModel
+  const selection = model?.rangeSelection
+  const selected = selection?.selected
+  const evidence = model?.evidenceLevel || 'PARTIAL'
+  elements.trendEvidence.textContent = `MODEL · ${evidence}`
+  elements.trendEvidence.className = `boundary-pill boundary-${evidence === 'MODELLED' ? 'verified' : 'partial'}`
+  const signalView = {
+    BUILDING_EVIDENCE: ['积累证据', '成交窗口或流动性复核尚未满足完整模型条件。'],
+    RESCAN_NO_TRADE: ['暂无合格区间', '候选没有同时通过宽度、成交覆盖和市场份额门槛；继续观察，不生成动作。'],
+    UPTREND_READY: ['上行候选成立', '成交加速与 PAIR 主动买入占比同时越过阈值；仍只展示，不执行。'],
+    HOLD_RANGE: ['维持观察', '当前没有同时满足成交加速与买入方向门槛。'],
+  }[model?.signal] || ['等待模型', '尚无可用的安全区块模型结果。']
+  elements.trendSignal.textContent = signalView[0]
+  elements.trendCopy.textContent = signalView[1]
+  elements.trendTarget.textContent = selected
+    ? `${selection.activeTarget ? '合格目标' : '领先候选（不交易）'} · ${price(selected.priceLowUsdg)} → ${price(selected.priceHighUsdg)}`
+    : '—'
+  elements.trendWidth.textContent = selected
+    ? `$${selected.actualPriceWidthUsdg.toFixed(5)} / ${percent(selected.targetWidthDeviationPct, 1)}`
+    : '—'
+  const hot = selection?.hotBand6hUsdg
+  elements.trendHotBand.textContent =
+    Number.isFinite(hot?.p10) && Number.isFinite(hot?.p90) ? `${price(hot.p10)} → ${price(hot.p90)}` : '—'
+  const flow = model?.flowSignals
+  elements.trendFlow.textContent = flow?.dataComplete
+    ? `${flow.volumeMultiple.toFixed(2)}× / ${percent(flow.oneHourPairBuySharePct, 1)}`
+    : 'PARTIAL'
+  elements.trendCandidates.replaceChildren()
+  for (const [index, candidate] of (selection?.candidates || []).slice(0, 3).entries()) {
+    const row = document.createElement('div')
+    const isSelected = candidate.tickLower === selected?.tickLower && candidate.tickUpper === selected?.tickUpper
+    const anchors = candidate.anchorSources || ['legacy_candidate']
+    const rejectionReasons = candidate.rejectionReasons || ['NOT_QUALIFIED']
+    const volumeAnchored = anchors.some((source) => source.includes('volume'))
+    const qualification = candidate.qualified ? 'PASS' : `FAIL · ${rejectionReasons[0]}`
+    row.className = `trend-candidate ${isSelected ? 'is-selected' : ''}`
+    row.title = candidate.qualified
+      ? `资格门槛全部通过；锚点：${anchors.join(', ')}`
+      : `未通过：${rejectionReasons.join(', ')}；锚点：${anchors.join(', ')}`
+    row.innerHTML = `
+      <b>${String(index + 1).padStart(2, '0')}</b>
+      <strong>${price(candidate.priceLowUsdg)} → ${price(candidate.priceHighUsdg)}</strong>
+      <span>${percent(candidate.oneHour.coveragePct, 0)} HOT · ${percent(candidate.oneHour.modeledVolumeWeightedSharePct, 2)} SHARE · ${volumeAnchored ? 'VOL' : 'SPOT'} · ${qualification}</span>
+    `
+    elements.trendCandidates.append(row)
+  }
+  drawTrendModel(data)
+}
+
 function renderPositions(data) {
   elements.positions.replaceChildren()
   for (const item of [...data.positions, ...(data.directPositions || [])]) {
@@ -510,8 +709,11 @@ function renderPortfolio(data) {
   const auditRows = [
     {
       label: 'NFT 清单',
-      value: `${portfolio.audit?.chainIds?.length || 0}/${portfolio.audit?.localIds?.length || 0}`,
-      detail: portfolio.audit?.inventoryStatus || 'UNKNOWN',
+      value:
+        portfolio.audit?.expectedBalance == null
+          ? `${portfolio.audit?.chainIds?.length || 0}/${portfolio.audit?.localIds?.length || 0}`
+          : `${portfolio.audit.inferredOwnedNfts}/${portfolio.audit.expectedBalance}`,
+      detail: `${portfolio.audit?.inventoryStatus || 'UNKNOWN'} · 自动 Transfer 游标`,
       level: portfolio.accountingBoundary.chainInventory.startsWith('verified') ? 'verified' : 'partial',
     },
     {
@@ -771,6 +973,7 @@ function render(data) {
   elements.footerUpdate.textContent = `最后有效快照 ${localTime(data.generatedAt)}`
   renderComparison(data)
   renderPortfolio(data)
+  renderTrendModel(data)
 
   document.querySelectorAll('[data-window]').forEach((button) => {
     button.setAttribute('aria-selected', String(button.dataset.window === data.selectedWindow))
@@ -836,6 +1039,13 @@ async function load() {
       const payload = await response.json()
       if (!response.ok)
         throw new Error(payload.runtime?.progress?.message || payload.status || `HTTP ${response.status}`)
+      const snapshotKey = `${payload.snapshotId || payload.pool?.blockHash || 'unknown'}:${payload.selectedWindow}`
+      if (snapshotKey === state.snapshotKey) {
+        state.data.runtime = payload.runtime
+        setStatus(payload.runtime)
+        return
+      }
+      state.snapshotKey = snapshotKey
       render(payload)
     } catch (error) {
       const runtime = state.data?.runtime || { status: 'ERROR', ageSeconds: null }
@@ -877,5 +1087,21 @@ window.addEventListener(
   { passive: true },
 )
 
+document.addEventListener('visibilitychange', () => {
+  if (state.poll) window.clearTimeout(state.poll)
+  if (!document.hidden) void load()
+  schedulePoll()
+})
+
 void load()
-state.poll = window.setInterval(() => void load(), 5_000)
+function schedulePoll() {
+  if (state.poll) window.clearTimeout(state.poll)
+  state.poll = window.setTimeout(
+    async () => {
+      await load()
+      schedulePoll()
+    },
+    document.hidden ? 30_000 : 5_000,
+  )
+}
+schedulePoll()

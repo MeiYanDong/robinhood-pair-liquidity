@@ -8,8 +8,9 @@
 
 1. 运行 `npm ci --ignore-scripts --no-audit --no-fund`。
 2. 运行 `npm run check`，确认格式、lint、类型检查、测试和公开总账断言全部通过。
-3. 如果此次变更包含新建、迁移或永久退出 LP，先在拥有完整本地执行记录的私有工作区
-   运行 `npm run portfolio:build`，并确认 inventory 为 `verified_complete_at_safe_block`。
+3. 如果此次变更包含新建、迁移或永久退出 LP，动态 inventory 会自动发现链上 NFT；如需
+   精确资金来源和成本口径，仍应在拥有完整执行记录的私有工作区运行 `npm run portfolio:build`。
+   发布前必须确认 `/api/inventory` 的 balance、索引持有数和逐仓验证数一致。
 4. 使用 SWAS 控制面读回实例 ID、公网 IP、`Running` 状态与 Cloud Assistant 可用性。
 
 ## 发布
@@ -24,7 +25,9 @@
 
 1. 确认 systemd 与 Nginx 均为 `active` 且 `enabled`。
    同时确认当前 release 的 `GIT_COMMIT` 与已通过 CI 的主分支提交完全一致。
-2. 检查公网 `/livez`、`/readyz`、`/api/portfolio` 和首页；`/readyz` 必须显示 `ready: true`。
+2. 检查公网 `/livez`、`/readyz`、`/api/inventory`、`/api/trend`、`/api/portfolio` 和首页；
+   `/readyz` 必须显示 `ready: true`，inventory 必须为 `VERIFIED`，趋势模型必须保持
+   `executionAuthorized=false`。
    新进程必须至少成功生成一次自己的安全区块快照，不能仅凭重启前留下的快照通过门禁。
    连续观察至少三个 60 秒刷新周期，确认安全区块持续前进且 journal 没有 RPC 失败循环。
 3. 对比本地与公网 `dashboard/public/app.js` 的 SHA-256。

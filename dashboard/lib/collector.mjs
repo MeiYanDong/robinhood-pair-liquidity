@@ -15,6 +15,13 @@ import {
   toHex,
 } from 'viem'
 import { buildPortfolioView, loadPortfolioManifest } from './portfolio.mjs'
+import {
+  PositionInventoryRepository,
+  decodePositionInfo,
+  inventoryAudit,
+  mergeRuntimePortfolioManifest,
+} from './position-inventory.mjs'
+import { deriveFlowSignals, selectUpwardRange } from './trend-model.mjs'
 
 const Q96_NUMBER = 2 ** 96
 const Q96 = 1n << 96n
@@ -90,7 +97,9 @@ const STATE_VIEW_ABI = parseAbi([
 
 const POSITION_MANAGER_ABI = parseAbi([
   'function ownerOf(uint256 tokenId) view returns (address)',
+  'function balanceOf(address owner) view returns (uint256)',
   'function getPositionLiquidity(uint256 tokenId) view returns (uint128)',
+  'function getPoolAndPositionInfo(uint256 tokenId) view returns ((address currency0,address currency1,uint24 fee,int24 tickSpacing,address hooks) poolKey,uint256 info)',
 ])
 
 const ERC20_BALANCE_ABI = parseAbi(['function balanceOf(address account) view returns (uint256)'])
@@ -105,6 +114,10 @@ const V3_QUOTER_ABI = parseAbi([
 
 const V4_SWAP_EVENT = parseAbiItem(
   'event Swap(bytes32 indexed id,address indexed sender,int128 amount0,int128 amount1,uint160 sqrtPriceX96,uint128 liquidity,int24 tick,uint24 fee)',
+)
+
+const POSITION_TRANSFER_EVENT = parseAbiItem(
+  'event Transfer(address indexed from,address indexed to,uint256 indexed tokenId)',
 )
 
 const V3_SWAP_EVENT = parseAbiItem(
@@ -211,6 +224,26 @@ export function currentPairPositionConfigs(configured = [], manifest = null) {
     })
   }
   return result
+}
+
+export function currentDirectPositionConfigs(pool, manifest = null) {
+  if (!manifest?.positions) return pool.positions || []
+  return manifest.positions
+    .filter((position) => {
+      if (String(position.poolId || '').toLowerCase() !== String(pool.poolId || '').toLowerCase()) return false
+      try {
+        return BigInt(position.lastKnownLiquidity || 0) > 0n
+      } catch {
+        return false
+      }
+    })
+    .map((position) => ({
+      label: position.label || `NFT ${position.tokenId}`,
+      role: position.role || 'external-unclassified',
+      tokenId: String(position.tokenId),
+      tickLower: Number(position.tickLower),
+      tickUpper: Number(position.tickUpper),
+    }))
 }
 
 export function v3HumanPriceFromSqrt(sqrtPriceX96, token0Decimals = 18, token1Decimals = 6) {
@@ -784,6 +817,10 @@ class Store {
       pairSwaps: Number(this.db.prepare('SELECT COUNT(*) AS count FROM pair_swaps').get().count),
       spyMarks: Number(this.db.prepare('SELECT COUNT(*) AS count FROM spy_marks').get().count),
       comparisonSwaps: Number(this.db.prepare('SELECT COUNT(*) AS count FROM comparison_swaps').get().count),
+      positionTransfers: Number(
+        this.db.prepare('SELECT COUNT(*) AS count FROM position_inventory_transfers').get().count,
+      ),
+      positionStates: Number(this.db.prepare('SELECT COUNT(*) AS count FROM position_inventory_states').get().count),
     }
   }
 
@@ -1128,10 +1165,240 @@ export class PairDashboardCollector {
     this.anchorBlock = BigInt(this.config.history.anchorBlock)
     this.identity = `${this.config.chain.id}:${this.poolId}:${this.anchorBlock}`
     this.store = new Store(databasePath, this.identity)
+    this.positionInventory = new PositionInventoryRepository(this.store.db)
     const manifestName = this.config.portfolio?.manifest || 'lp-portfolio-ledger.json'
     this.portfolioManifestPath = path.resolve(path.dirname(configPath), manifestName)
-    this.portfolioManifest = loadPortfolioManifest(this.portfolioManifestPath)
+    this.basePortfolioManifest = loadPortfolioManifest(this.portfolioManifestPath)
+    this.portfolioManifest = this.basePortfolioManifest
+    this.positionInventorySnapshot = null
     this.pairPositionConfigs = currentPairPositionConfigs(this.config.positions, this.portfolioManifest)
+    this.comparisonPools = this.comparisonPools.map((pool) => ({
+      ...pool,
+      positions: currentDirectPositionConfigs(pool, this.portfolioManifest),
+    }))
+  }
+
+  positionPoolRegistry() {
+    return [
+      {
+        poolKind: 'pair-spy',
+        poolId: this.poolId,
+        label: 'PAIR / SPY',
+      },
+      ...this.comparisonPools.map((pool) => ({
+        poolKind: 'pair-usdg',
+        poolId: pool.poolId,
+        label: `${pool.label} ${pool.feeLabel}`,
+      })),
+      ...(this.basePortfolioManifest?.pools || []).map((pool) => ({
+        poolKind: pool.poolKind,
+        poolId: pool.poolId,
+        label: pool.label,
+      })),
+    ].filter(
+      (pool, index, all) => pool.poolId && all.findIndex((candidate) => candidate.poolId === pool.poolId) === index,
+    )
+  }
+
+  async resetPositionInventoryToFullScan(reason) {
+    const scanFromBlock = BigInt(this.basePortfolioManifest?.audit?.scanFromBlock || this.anchorBlock)
+    this.onProgress({
+      phase: 'position-inventory-rebuild',
+      message: `仓位清单游标需要重建：${reason}；从区块 ${scanFromBlock} 重新扫描`,
+    })
+    this.positionInventory.initializeFullScan({
+      scanFromBlock,
+      wallet: this.wallet,
+      positionManager: this.positionManager,
+    })
+  }
+
+  async ensurePositionInventoryInitialized(safeBlock) {
+    if (!this.basePortfolioManifest) return
+    if (this.positionInventory.initialized()) {
+      const storedWallet = this.positionInventory.getMeta('wallet')
+      const storedPositionManager = this.positionInventory.getMeta('position_manager')
+      if (!storedWallet && !storedPositionManager) {
+        this.positionInventory.setMeta('wallet', this.wallet.toLowerCase())
+        this.positionInventory.setMeta('position_manager', this.positionManager.toLowerCase())
+      } else if (
+        storedWallet !== this.wallet.toLowerCase() ||
+        storedPositionManager !== this.positionManager.toLowerCase()
+      ) {
+        await this.resetPositionInventoryToFullScan('钱包或 PositionManager 身份发生变化')
+      }
+    }
+    if (!this.positionInventory.initialized()) {
+      const audit = this.basePortfolioManifest.audit || {}
+      const seedBlock = BigInt(audit.safeBlock || 0)
+      const canUseManifestSeed =
+        audit.inventoryStatus === 'verified_complete_at_safe_block' &&
+        Boolean(audit.safeBlockHash) &&
+        seedBlock <= safeBlock.number
+      if (canUseManifestSeed) {
+        const chainSeed = await this.getBlock({ blockNumber: seedBlock })
+        if (chainSeed.hash.toLowerCase() === String(audit.safeBlockHash).toLowerCase()) {
+          this.positionInventory.initializeFromManifest({
+            manifest: this.basePortfolioManifest,
+            wallet: this.wallet,
+            positionManager: this.positionManager,
+          })
+        } else {
+          await this.resetPositionInventoryToFullScan('静态清单安全区块哈希不再匹配')
+        }
+      } else {
+        await this.resetPositionInventoryToFullScan('静态清单不是可验证的完整安全区块种子')
+      }
+    }
+
+    const cursor = this.positionInventory.cursor()
+    if (cursor > safeBlock.number) {
+      await this.resetPositionInventoryToFullScan('持久化游标高于当前安全区块')
+      return
+    }
+    const cursorHash = this.positionInventory.cursorHash()
+    if (cursor >= 0n && cursorHash) {
+      const chainCursor = await this.getBlock({ blockNumber: cursor })
+      if (chainCursor.hash.toLowerCase() !== cursorHash.toLowerCase()) {
+        await this.resetPositionInventoryToFullScan('检测到仓位事件游标重组')
+      }
+    }
+  }
+
+  async readInventoryPosition(tokenId, blockNumber, registry) {
+    try {
+      const [owner, liquidity, [poolKey, info]] = await Promise.all([
+        this.client.readContract({
+          address: this.positionManager,
+          abi: POSITION_MANAGER_ABI,
+          functionName: 'ownerOf',
+          args: [BigInt(tokenId)],
+          blockNumber,
+        }),
+        this.client.readContract({
+          address: this.positionManager,
+          abi: POSITION_MANAGER_ABI,
+          functionName: 'getPositionLiquidity',
+          args: [BigInt(tokenId)],
+          blockNumber,
+        }),
+        this.client.readContract({
+          address: this.positionManager,
+          abi: POSITION_MANAGER_ABI,
+          functionName: 'getPoolAndPositionInfo',
+          args: [BigInt(tokenId)],
+          blockNumber,
+        }),
+      ])
+      return decodePositionInfo({ tokenId, owner, liquidity, poolKey, info, registry, wallet: this.wallet })
+    } catch (error) {
+      return {
+        tokenId: String(tokenId),
+        owner: null,
+        liquidity: null,
+        status: 'read_failed',
+        poolKind: 'unknown',
+        poolId: null,
+        poolLabel: 'UNKNOWN POOL',
+        tickLower: null,
+        tickUpper: null,
+        dataQuality: `read_failed:${safePublicError(error)}`,
+      }
+    }
+  }
+
+  async syncPositionInventory(safeBlock) {
+    if (!this.basePortfolioManifest) return null
+    await this.ensurePositionInventoryInitialized(safeBlock)
+    const configuredChunk = Number(this.config.portfolio?.inventoryLogChunk || 50_000)
+    const logChunk = BigInt(Math.max(1_000, Math.trunc(configuredChunk)))
+    let cursor = this.positionInventory.cursor()
+    while (cursor < safeBlock.number) {
+      const fromBlock = cursor + 1n
+      const toBlock = fromBlock + logChunk - 1n < safeBlock.number ? fromBlock + logChunk - 1n : safeBlock.number
+      this.onProgress({
+        phase: 'position-inventory-sync',
+        message: `扫描 PositionManager NFT ${fromBlock}–${toBlock}`,
+      })
+      const [incoming, outgoing] = await Promise.all([
+        this.getLogs(this.positionManager, POSITION_TRANSFER_EVENT, fromBlock, toBlock, { to: this.wallet }),
+        this.getLogs(this.positionManager, POSITION_TRANSFER_EVENT, fromBlock, toBlock, { from: this.wallet }),
+      ])
+      const unique = new Map()
+      for (const log of [...incoming, ...outgoing]) unique.set(`${log.transactionHash}:${log.logIndex}`, log)
+      const logs = [...unique.values()].sort(
+        (left, right) =>
+          Number(left.blockNumber - right.blockNumber) ||
+          Number(left.transactionIndex - right.transactionIndex) ||
+          Number(left.logIndex - right.logIndex),
+      )
+      const endBlock = toBlock === safeBlock.number ? safeBlock : await this.getBlock({ blockNumber: toBlock })
+      this.positionInventory.commitTransfers({ logs, cursorBlock: toBlock, cursorHash: endBlock.hash })
+      cursor = toBlock
+    }
+
+    const ownedTokenIds = this.positionInventory.ownedTokenIds(this.wallet)
+    const [expectedBalance, ownedStates] = await Promise.all([
+      this.client.readContract({
+        address: this.positionManager,
+        abi: POSITION_MANAGER_ABI,
+        functionName: 'balanceOf',
+        args: [this.wallet],
+        blockNumber: safeBlock.number,
+      }),
+      mapWithConcurrency(ownedTokenIds, Math.max(1, Math.floor(this.rpcMethodConcurrency / 3)), (tokenId) =>
+        this.readInventoryPosition(tokenId, safeBlock.number, this.positionPoolRegistry()),
+      ),
+    ])
+    const ownedSet = new Set(ownedTokenIds)
+    const previousById = new Map([
+      ...this.positionInventory
+        .seeds()
+        .filter((seed) => seed.state)
+        .map((seed) => [String(seed.tokenId), seed.state]),
+      ...this.positionInventory.states().map((state) => [String(state.tokenId), state]),
+    ])
+    const allKnownIds = new Set([
+      ...previousById.keys(),
+      ...this.positionInventory.transfers().map((transfer) => String(transfer.tokenId)),
+    ])
+    const nonOwnedStates = [...allKnownIds]
+      .filter((tokenId) => !ownedSet.has(tokenId))
+      .map((tokenId) => {
+        const previous = previousById.get(tokenId) || {}
+        return {
+          ...previous,
+          tokenId,
+          owner: null,
+          liquidity: previous.liquidity ?? previous.lastKnownLiquidity ?? null,
+          status: 'owner_mismatch',
+          dataQuality: 'ownership_derived_from_canonical_transfer_events',
+        }
+      })
+    const audit = {
+      ...inventoryAudit({ expectedBalance, ownedTokenIds, states: ownedStates, safeBlock }),
+      cursorBlock: this.positionInventory.cursor().toString(),
+      cursorHash: this.positionInventory.cursorHash(),
+    }
+    if (!audit.balanceMatches && this.positionInventory.getMeta('mode') !== 'full_scan') {
+      await this.resetPositionInventoryToFullScan('balanceOf 与增量事件推导数量不一致')
+      return this.syncPositionInventory(safeBlock)
+    }
+    const states = [...ownedStates, ...nonOwnedStates]
+    this.positionInventory.saveStates({ states, safeBlock, audit })
+    this.portfolioManifest = mergeRuntimePortfolioManifest({
+      manifest: this.basePortfolioManifest,
+      states,
+      audit,
+      firstTransfers: this.positionInventory.firstTransfers(),
+    })
+    this.pairPositionConfigs = currentPairPositionConfigs(this.config.positions, this.portfolioManifest)
+    this.comparisonPools = this.comparisonPools.map((pool) => ({
+      ...pool,
+      positions: currentDirectPositionConfigs(pool, this.portfolioManifest),
+    }))
+    this.positionInventorySnapshot = { states, audit }
+    return this.positionInventorySnapshot
   }
 
   async getLogs(address, event, fromBlock, toBlock, args) {
@@ -1337,28 +1604,35 @@ export class PairDashboardCollector {
     })
   }
 
-  async readPosition(position, sqrtPriceX96, spyUsdg, pairUsdg, currentTick, blockNumber) {
+  async readPosition(position, sqrtPriceX96, spyUsdg, pairUsdg, currentTick, blockNumber, inventoryState = null) {
     const tokenId = BigInt(position.tokenId)
     let owner
-    try {
-      owner = await this.client.readContract({
-        address: this.positionManager,
-        abi: POSITION_MANAGER_ABI,
-        functionName: 'ownerOf',
-        args: [tokenId],
-        blockNumber,
-      })
-    } catch {
-      return { ...position, status: 'missing', inRange: false, dataQuality: 'ownerOf_failed' }
+    let knownLiquidity = null
+    if (inventoryState?.dataQuality === 'verified_same_safe_block') {
+      owner = inventoryState.owner
+      knownLiquidity = BigInt(inventoryState.liquidity)
+    } else {
+      try {
+        owner = await this.client.readContract({
+          address: this.positionManager,
+          abi: POSITION_MANAGER_ABI,
+          functionName: 'ownerOf',
+          args: [tokenId],
+          blockNumber,
+        })
+      } catch {
+        return { ...position, status: 'missing', inRange: false, dataQuality: 'ownerOf_failed' }
+      }
     }
     const [managerLiquidity, accrued] = await Promise.all([
-      this.client.readContract({
-        address: this.positionManager,
-        abi: POSITION_MANAGER_ABI,
-        functionName: 'getPositionLiquidity',
-        args: [tokenId],
-        blockNumber,
-      }),
+      knownLiquidity ??
+        this.client.readContract({
+          address: this.positionManager,
+          abi: POSITION_MANAGER_ABI,
+          functionName: 'getPositionLiquidity',
+          args: [tokenId],
+          blockNumber,
+        }),
       this.getAccruedFees(position, blockNumber),
     ])
     const owned = owner.toLowerCase() === this.wallet.toLowerCase()
@@ -1396,38 +1670,45 @@ export class PairDashboardCollector {
     }
   }
 
-  async readDirectPosition(pool, position, state, blockNumber) {
+  async readDirectPosition(pool, position, state, blockNumber, inventoryState = null) {
     const tokenId = BigInt(position.tokenId)
     const [slot0] = state
     const currentTick = Number(slot0[1])
     let owner
-    try {
-      owner = await this.client.readContract({
-        address: this.positionManager,
-        abi: POSITION_MANAGER_ABI,
-        functionName: 'ownerOf',
-        args: [tokenId],
-        blockNumber,
-      })
-    } catch {
-      return {
-        ...position,
-        poolId: pool.poolId,
-        poolLabel: `${pool.label} ${pool.feeLabel}`,
-        poolKind: 'direct',
-        status: 'missing',
-        inRange: false,
-        dataQuality: 'ownerOf_failed',
+    let knownLiquidity = null
+    if (inventoryState?.dataQuality === 'verified_same_safe_block') {
+      owner = inventoryState.owner
+      knownLiquidity = BigInt(inventoryState.liquidity)
+    } else {
+      try {
+        owner = await this.client.readContract({
+          address: this.positionManager,
+          abi: POSITION_MANAGER_ABI,
+          functionName: 'ownerOf',
+          args: [tokenId],
+          blockNumber,
+        })
+      } catch {
+        return {
+          ...position,
+          poolId: pool.poolId,
+          poolLabel: `${pool.label} ${pool.feeLabel}`,
+          poolKind: 'direct',
+          status: 'missing',
+          inRange: false,
+          dataQuality: 'ownerOf_failed',
+        }
       }
     }
     const [managerLiquidity, accrued] = await Promise.all([
-      this.client.readContract({
-        address: this.positionManager,
-        abi: POSITION_MANAGER_ABI,
-        functionName: 'getPositionLiquidity',
-        args: [tokenId],
-        blockNumber,
-      }),
+      knownLiquidity ??
+        this.client.readContract({
+          address: this.positionManager,
+          abi: POSITION_MANAGER_ABI,
+          functionName: 'getPositionLiquidity',
+          args: [tokenId],
+          blockNumber,
+        }),
       this.getAccruedFeesForPool(pool.poolId, position, blockNumber),
     ])
     const owned = owner.toLowerCase() === this.wallet.toLowerCase()
@@ -1482,6 +1763,9 @@ export class PairDashboardCollector {
   async readPortfolioChainStates(detailedPositions, blockNumber) {
     if (!this.portfolioManifest) return []
     const detailById = new Map(detailedPositions.map((position) => [String(position.tokenId), position]))
+    const inventoryById = new Map(
+      (this.positionInventorySnapshot?.states || []).map((position) => [String(position.tokenId), position]),
+    )
     // Each lifecycle item queues ownerOf and getPositionLiquidity together. Keep
     // the combined method count within one configured JSON-RPC batch while
     // avoiding the many small HTTP requests produced by a fixed worker count.
@@ -1495,6 +1779,16 @@ export class PairDashboardCollector {
           liquidity: detailed.liquidity || '0',
           status: detailed.status,
           dataQuality: detailed.dataQuality,
+        }
+      }
+      const inventory = inventoryById.get(String(position.tokenId))
+      if (inventory) {
+        return {
+          tokenId: String(position.tokenId),
+          owner: inventory.owner || null,
+          liquidity: inventory.liquidity,
+          status: inventory.status,
+          dataQuality: inventory.dataQuality,
         }
       }
       try {
@@ -1849,8 +2143,11 @@ export class PairDashboardCollector {
       this.config.tokens.usdg.decimals,
       this.config.tokens.pair.decimals,
     )
+    const inventoryById = new Map(
+      (this.positionInventorySnapshot?.states || []).map((position) => [String(position.tokenId), position]),
+    )
     const actualPositions = await mapWithConcurrency(pool.positions || [], 4, (position) =>
-      this.readDirectPosition(pool, position, state, safeBlock.number),
+      this.readDirectPosition(pool, position, state, safeBlock.number, inventoryById.get(String(position.tokenId))),
     )
     const activePositions = positions.filter((position) => position.status === 'active')
     const hypotheticalPositions = activePositions.map((position) => ({
@@ -2168,8 +2465,19 @@ export class PairDashboardCollector {
     const currentTick = Number(slot0[1])
     const spyUsdg = v3HumanPriceFromSqrt(spySlot0[0], this.config.tokens.spy.decimals, this.config.tokens.usdg.decimals)
     const pairUsdg = pairPriceAtTick(spyUsdg, currentTick)
+    const inventoryById = new Map(
+      (this.positionInventorySnapshot?.states || []).map((position) => [String(position.tokenId), position]),
+    )
     const positions = await mapWithConcurrency(this.pairPositionConfigs, 4, (position) =>
-      this.readPosition(position, slot0[0], spyUsdg, pairUsdg, currentTick, safeBlock.number),
+      this.readPosition(
+        position,
+        slot0[0],
+        spyUsdg,
+        pairUsdg,
+        currentTick,
+        safeBlock.number,
+        inventoryById.get(String(position.tokenId)),
+      ),
     )
 
     const pairSwaps = this.store.pairSwaps()
@@ -2261,6 +2569,62 @@ export class PairDashboardCollector {
         sum + (currentTick >= position.tickLower && currentTick < position.tickUpper ? BigInt(position.liquidity) : 0n),
       0n,
     )
+    const trendConfig = this.config.trendModel || {}
+    const referenceLiquidityBps = Number(trendConfig.referenceLiquidityBps || 2_500)
+    const referenceAddedLiquidity =
+      ourActiveLiquidity > 0n ? (ourActiveLiquidity * BigInt(referenceLiquidityBps)) / 10_000n : activeLiquidity / 100n
+    const flowSignals = deriveFlowSignals({
+      oneHourTotals: windows['1h']?.totals || {},
+      sixHourTotals: windows['6h']?.totals || {},
+      spyUsdg,
+      pairUsdg,
+    })
+    const rangeSelection = selectUpwardRange({
+      currentTick,
+      tickSpacing: spacing,
+      spyUsdg,
+      oneHourBins: windows['1h']?.bins || [],
+      sixHourBins: windows['6h']?.bins || [],
+      referenceAddedLiquidity,
+      targetPriceWidthUsdg: Number(trendConfig.targetPriceWidthUsdg || 0.01),
+      targetWidthTolerancePct: Number(trendConfig.targetWidthTolerancePct || 20),
+      widthMultipliers: trendConfig.widthMultipliers || [0.8, 1, 1.2, 1.5],
+      upsideRoomShares: trendConfig.upsideRoomShares || [0.7, 0.8, 0.9, 1],
+    })
+    const volumeAccelerationThreshold = Number(trendConfig.volumeAccelerationThreshold || 1.5)
+    const pairBuyShareThresholdPct = Number(trendConfig.pairBuyShareThresholdPct || 60)
+    const trendSignal = !flowSignals.dataComplete
+      ? 'BUILDING_EVIDENCE'
+      : !rangeSelection.anyQualified
+        ? 'RESCAN_NO_TRADE'
+        : flowSignals.volumeMultiple >= volumeAccelerationThreshold &&
+            flowSignals.oneHourPairBuySharePct >= pairBuyShareThresholdPct
+          ? 'UPTREND_READY'
+          : 'HOLD_RANGE'
+    const trendModel = {
+      schemaVersion: 1,
+      modelVersion: 'pair-trend-range-v3',
+      mode: 'READ_ONLY_SHADOW',
+      executionAuthorized: false,
+      evidenceLevel: flowSignals.dataComplete && rangeSelection.anyQualified ? 'MODELLED' : 'PARTIAL',
+      signal: trendSignal,
+      signalThresholds: {
+        volumeAccelerationMultiple: volumeAccelerationThreshold,
+        pairBuySharePct: pairBuyShareThresholdPct,
+      },
+      referenceAddedLiquidity: referenceAddedLiquidity.toString(),
+      flowSignals,
+      rangeSelection,
+      activeRanges: activePositions.map((position) => ({
+        tokenId: position.tokenId,
+        label: position.label,
+        priceLowUsdg: position.priceLowUsdg,
+        priceHighUsdg: position.priceHighUsdg,
+        inRange: position.inRange,
+      })),
+      meaning:
+        'Candidate selection uses safe-block 1h/6h volume location, current market liquidity, projected share and an approximately $0.01 configurable price-width preference.',
+    }
     const directPools = await Promise.all(
       this.comparisonPools.map((pool, index) =>
         this.buildDirectComparisonPool(pool, comparisonStates[index], positions, safeBlock),
@@ -2291,10 +2655,58 @@ export class PairDashboardCollector {
       pairSwaps,
       marks,
     })
+    const snapshotId = `${this.config.chain.id}:${safeBlock.number}:${safeBlock.hash}`
+    const generatedAt = new Date().toISOString()
+    trendModel.snapshotId = snapshotId
+    trendModel.generatedAt = generatedAt
+    trendModel.asOfBlock = safeBlock.number.toString()
+    trendModel.asOfBlockHash = safeBlock.hash
+    const inventoryStates = this.positionInventorySnapshot?.states || []
+    const inventoryAuditResult = this.positionInventorySnapshot?.audit || {
+      status: 'UNKNOWN',
+      inventoryStatus: 'position_inventory_not_available',
+    }
+    const inventory = {
+      schemaVersion: 1,
+      snapshotId,
+      generatedAt,
+      chainId: this.config.chain.id,
+      wallet: this.wallet,
+      confirmationDepth: Number(this.confirmations),
+      headBlock: this.lastHeadNumber?.toString() || null,
+      safeBlock: safeBlock.number.toString(),
+      safeBlockHash: safeBlock.hash,
+      cursorBlock: inventoryAuditResult.cursorBlock || null,
+      cursorHash: inventoryAuditResult.cursorHash || null,
+      status: inventoryAuditResult.status,
+      inventoryStatus: inventoryAuditResult.inventoryStatus,
+      expectedBalance: inventoryAuditResult.expectedBalance ?? null,
+      indexedOwnedCount: inventoryAuditResult.inferredOwnedNfts ?? null,
+      verifiedOwnedCount: inventoryAuditResult.verifiedOwnedNfts ?? null,
+      balanceMatches: inventoryAuditResult.balanceMatches ?? false,
+      warnings: [
+        ...(inventoryAuditResult.balanceMatches === false ? ['BALANCE_MISMATCH'] : []),
+        ...((inventoryAuditResult.failedTokenIds || []).length ? ['POSITION_READ_FAILURE'] : []),
+      ],
+      lifecycleSummary: {
+        discovered: inventoryStates.length,
+        active: inventoryStates.filter((position) => position.status === 'active').length,
+        empty: inventoryStates.filter((position) => position.status === 'empty').length,
+        ownerMismatch: inventoryStates.filter((position) => position.status === 'owner_mismatch').length,
+        readFailed: inventoryStates.filter((position) => position.status === 'read_failed').length,
+      },
+      positions: inventoryStates,
+      evidence: {
+        level: inventoryAuditResult.status,
+        method: inventoryAuditResult.method || null,
+        accountingForAutoDiscoveredPositions: 'UNKNOWN until attributed by an audited ledger event',
+      },
+    }
 
     return {
-      schemaVersion: 3,
-      generatedAt: new Date().toISOString(),
+      schemaVersion: 4,
+      snapshotId,
+      generatedAt,
       status: 'LIVE',
       chain: {
         id: this.config.chain.id,
@@ -2333,16 +2745,22 @@ export class PairDashboardCollector {
       },
       positions,
       directPositions,
+      inventory,
       portfolio,
       focusBandUsdg: this.config.focusBandUsdg,
       windows,
+      trendModel,
       comparison,
       dataQuality: {
-        positionVerification: [...positions, ...directPositions].every(
-          (position) => position.dataQuality === 'verified',
-        )
-          ? 'verified'
-          : 'partial',
+        positionInventory: this.positionInventorySnapshot?.audit || {
+          status: 'UNKNOWN',
+          inventoryStatus: 'position_inventory_not_available',
+        },
+        positionVerification:
+          [...positions, ...directPositions].every((position) => position.dataQuality === 'verified') &&
+          this.positionInventorySnapshot?.audit?.status === 'VERIFIED'
+            ? 'verified'
+            : 'partial',
         historyCoverage: 'from configured anchor block',
         grossFeeMeaning: 'pool-wide estimate, not wallet attribution',
         accruedFeeMeaning: 'wallet-position feeGrowth readback at the displayed block, before gas',
@@ -2360,8 +2778,10 @@ export class PairDashboardCollector {
 
   async refresh() {
     const head = await this.getBlock()
+    this.lastHeadNumber = head.number
     const safeNumber = head.number > this.confirmations ? head.number - this.confirmations : head.number
     const safeBlock = await this.getBlock({ blockNumber: safeNumber })
+    await this.syncPositionInventory(safeBlock)
     await this.syncTo(safeBlock.number)
     for (const pool of this.comparisonPools) await this.syncComparisonPoolTo(pool, safeBlock.number)
     this.onProgress({ phase: 'build', message: `构建安全区块 ${safeBlock.number} 快照` })

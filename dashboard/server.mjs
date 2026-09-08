@@ -172,10 +172,12 @@ function publicRuntime() {
     refreshMs: REFRESH_MS,
     hasSucceededSinceStart: runtime.hasSucceededSinceStart,
   })
+  const inventoryReady = runtime.snapshot?.inventory?.status === 'VERIFIED'
+  const ready = evaluated.ready && inventoryReady
   return {
     service: runtime.service,
-    status: evaluated.status,
-    ready: evaluated.ready,
+    status: evaluated.status === 'LIVE' && !inventoryReady ? 'DEGRADED' : evaluated.status,
+    ready,
     startedAt: runtime.startedAt,
     lastAttemptAt: runtime.lastAttemptAt,
     lastSuccessAt: runtime.lastSuccessAt,
@@ -186,6 +188,13 @@ function publicRuntime() {
     progress: runtime.progress,
     blockNumber: runtime.snapshot?.pool?.blockNumber || null,
     blockTime: runtime.snapshot?.pool?.blockTime || null,
+    snapshotId: runtime.snapshot?.snapshotId || null,
+    subsystems: {
+      market: runtime.snapshot ? (evaluated.ready ? 'LIVE' : evaluated.status) : 'INITIALIZING',
+      inventory: runtime.snapshot?.inventory?.status || 'INITIALIZING',
+      trend: runtime.snapshot?.trendModel?.evidenceLevel || 'INITIALIZING',
+      publisher: runtime.hasSucceededSinceStart ? 'LIVE' : 'INITIALIZING',
+    },
   }
 }
 
@@ -220,6 +229,16 @@ const server = http.createServer((request, response) => {
           ? {
               chain: runtime.snapshot.chain,
               history: runtime.snapshot.history,
+              trendModel: runtime.snapshot.trendModel
+                ? {
+                    modelVersion: runtime.snapshot.trendModel.modelVersion,
+                    mode: runtime.snapshot.trendModel.mode,
+                    evidenceLevel: runtime.snapshot.trendModel.evidenceLevel,
+                    executionAuthorized: runtime.snapshot.trendModel.executionAuthorized,
+                    selectionMethod: runtime.snapshot.trendModel.rangeSelection?.selectionMethod,
+                    limitations: runtime.snapshot.trendModel.rangeSelection?.limitations,
+                  }
+                : null,
               comparison: runtime.snapshot.comparison
                 ? {
                     method: runtime.snapshot.comparison.method,
@@ -257,6 +276,29 @@ const server = http.createServer((request, response) => {
       sendJson(response, 200, {
         runtime: publicRuntime(),
         portfolio: runtime.snapshot.portfolio,
+      })
+      return
+    }
+    if (url.pathname === '/api/inventory') {
+      if (!runtime.snapshot?.inventory) {
+        sendJson(response, 503, { status: 'INVENTORY_UNAVAILABLE', runtime: publicRuntime() }, { 'retry-after': '5' })
+        return
+      }
+      sendJson(response, runtime.snapshot.inventory.status === 'VERIFIED' ? 200 : 206, {
+        runtime: publicRuntime(),
+        inventory: runtime.snapshot.inventory,
+      })
+      return
+    }
+    if (url.pathname === '/api/trend') {
+      if (!runtime.snapshot?.trendModel) {
+        sendJson(response, 503, { status: 'TREND_UNAVAILABLE', runtime: publicRuntime() }, { 'retry-after': '5' })
+        return
+      }
+      sendJson(response, 200, {
+        runtime: publicRuntime(),
+        pool: runtime.snapshot.pool,
+        trendModel: runtime.snapshot.trendModel,
       })
       return
     }

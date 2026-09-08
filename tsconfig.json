@@ -8,5 +8,10 @@
     "strict": true,
     "target": "ES2022"
   },
-  "include": ["lib/**/*.mjs", "dashboard/lib/runtime-status.mjs"]
+  "include": [
+    "lib/**/*.mjs",
+    "dashboard/lib/position-inventory.mjs",
+    "dashboard/lib/runtime-status.mjs",
+    "dashboard/lib/trend-model.mjs"
+  ]
 }

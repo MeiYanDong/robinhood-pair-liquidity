@@ -1,17 +1,17 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-09-07T03:56:28.299Z",
+  "generatedAt": "2026-09-07T16:19:39.870Z",
   "wallet": "0xe864237f450E3C813EB6C5652106EC3AFd9Bc919",
   "chainId": 4663,
   "explorerTxBaseUrl": "https://robinhoodchain.blockscout.com/tx/",
   "audit": {
-    "safeBlock": "56528875",
-    "safeBlockHash": "0xda676e39f332df744616594fe00dbc4b58e533bbdcb39c474c402c7867cb272d",
-    "safeBlockTime": "2026-09-07T03:55:09.000Z",
+    "safeBlock": "56970830",
+    "safeBlockHash": "0x2f52ef8a50e152d330ff729311ff070186163d43d8c4afeb097544cd495e4a79",
+    "safeBlockTime": "2026-09-07T16:18:16.000Z",
     "scanFromBlock": "52674521",
-    "incomingTransfers": 22,
+    "incomingTransfers": 24,
     "outgoingTransfers": 0,
-    "uniqueNfts": 22,
+    "uniqueNfts": 24,
     "source": "PositionManager Transfer logs plus ownerOf/getPositionLiquidity/getPoolAndPositionInfo",
     "inventoryStatus": "verified_complete_at_safe_block",
     "localIds": [
@@ -36,7 +36,9 @@
       "1988669",
       "2006287",
       "2008008",
-      "2073305"
+      "2073305",
+      "2096314",
+      "2117000"
     ],
     "chainIds": [
       "1548977",
@@ -60,7 +62,9 @@
       "1988669",
       "2006287",
       "2008008",
-      "2073305"
+      "2073305",
+      "2096314",
+      "2117000"
     ],
     "missingOnChain": [],
     "missingLocally": []
@@ -252,6 +256,49 @@
       "localState": {
         "status": null,
         "source": null
+      },
+      "exit": {
+        "tokenId": "1615859",
+        "at": "2026-09-04T15:51:49.000Z",
+        "blockNumber": "54385836",
+        "transactionHash": "0xe9e21074d816fff96e6d13ead95c7c4a52ba5566e0ceba40543c5eacad1b9a73",
+        "grossRaw": {
+          "usdgAtomic": "0",
+          "oneAtomic": "11170058161816984710875"
+        },
+        "terminalFeeRaw": {
+          "usdgAtomic": "0",
+          "oneAtomic": "0"
+        },
+        "mark": {
+          "oneUsdg": 0.0009154017166110287,
+          "quality": "nearest_prior_canonical_swap"
+        },
+        "amountQuality": "verified_receipt_transfer_matches_position_tick_math",
+        "source": "canonical_remove_receipt_plus_tick_math",
+        "quality": "verified_liquidity_zero",
+        "note": "Removal receipt transferred exactly 11170.058161816984710875 $1 to the wallet. TickMath using liquidity 753457878842327 and the nearest prior canonical swap at block 54380432 derives the identical principal; terminal fee is zero.",
+        "grossAmounts": {
+          "eth": 0,
+          "spy": 0,
+          "pair": 0,
+          "usdg": 0,
+          "one": 11170.058161816985
+        },
+        "terminalFeeAmounts": {
+          "eth": 0,
+          "spy": 0,
+          "pair": 0,
+          "usdg": 0,
+          "one": 0
+        },
+        "principalAmounts": {
+          "eth": 0,
+          "spy": 0,
+          "pair": 0,
+          "usdg": 0,
+          "one": 11170.058161816985
+        }
       },
       "poolId": "0x282357c206ac0bb5db679efe669404fce4142ca3c28e5e28339cc4502e8e20e6",
       "poolLabel": "$1 / USDG",
@@ -1337,8 +1384,8 @@
         "quality": "decoded_calldata_receipt_and_liquidity_zero",
         "note": "The decoded call removed the entire NFT liquidity. The 182.126088 USDG receipt exactly matches TickMath principal for the saved liquidity and range, so this was a principal exit rather than a fee-only collection.",
         "mark": {
-          "spyUsdg": 771.3778559175927,
-          "pairUsdg": 0.007215363660794836,
+          "spyUsdg": 772.1500863732412,
+          "pairUsdg": 0.01518755035107532,
           "quality": "nearest_prior_canonical_swap"
         },
         "grossAmounts": {
@@ -1439,8 +1486,8 @@
         "source": "local_execution_record",
         "quality": "confirmed_receipt_and_liquidity_zero",
         "mark": {
-          "spyUsdg": 771.3778559175927,
-          "pairUsdg": 0.007215363660794836,
+          "spyUsdg": 772.2047311294066,
+          "pairUsdg": 0.01632411069651321,
           "quality": "nearest_prior_canonical_swap"
         },
         "grossAmounts": {
@@ -1541,8 +1588,8 @@
         "source": "local_execution_record",
         "quality": "confirmed_receipt_and_liquidity_zero",
         "mark": {
-          "spyUsdg": 771.3778559175927,
-          "pairUsdg": 0.007215363660794836,
+          "spyUsdg": 772.2034127248521,
+          "pairUsdg": 0.016119699917483597,
           "quality": "nearest_prior_canonical_swap"
         },
         "grossAmounts": {
@@ -1772,8 +1819,8 @@
             "one": 0
           },
           "mark": {
-            "spyUsdg": 771.3778559175927,
-            "pairUsdg": 0.022570766994987626,
+            "spyUsdg": 773.6423260668544,
+            "pairUsdg": 0.022637026128191927,
             "quality": "operation_build_tick_plus_nearest_spy_mark"
           },
           "source": "local_execution_record",
@@ -1794,8 +1841,8 @@
             "one": 0
           },
           "mark": {
-            "spyUsdg": 771.3778559175927,
-            "pairUsdg": 0.022469431785402356,
+            "spyUsdg": 773.6423260668544,
+            "pairUsdg": 0.022535393437216163,
             "quality": "operation_build_tick_plus_nearest_spy_mark"
           },
           "source": "local_execution_record",
@@ -1859,6 +1906,26 @@
           "source": "decoded_position_manager_mint_plus_receipt_wallet_delta",
           "quality": "verified_wallet_delta",
           "note": "Token quantities are exact from the receipt; the USDG mark is a nearby preflight observation because the public RPC does not serve the historical eth_call at this block."
+        },
+        {
+          "tokenId": "1983646",
+          "id": "manual-ui-increase-1983646-55630699",
+          "kind": "increase",
+          "at": "2026-09-06T02:45:26.000Z",
+          "blockNumber": "55630699",
+          "transactionHash": "0x53ef72354161f706152466c39cc4cc412ba355efda703956962c290b3fc3bf33",
+          "amounts": {
+            "spy": 0.014165593376437873,
+            "pair": 12873.917002179114
+          },
+          "mark": {
+            "spyUsdg": 773.8405391433398,
+            "pairUsdg": 0.024809794012683756,
+            "quality": "nearest_prior_canonical_pool_swaps"
+          },
+          "source": "decoded_modify_liquidity_delta_plus_canonical_tick_math",
+          "quality": "derived_total_underlying_added",
+          "note": "Total liquidity input is derived from the canonical ModifyLiquidity delta and nearest prior pool sqrt price; wallet spend was 0.002991078473955491 SPY + 12551.422833333709106264 PAIR and the remainder was same-position accrued-fee credit."
         }
       ],
       "label": "高位单边仓",
@@ -1892,9 +1959,29 @@
     },
     {
       "tokenId": "1987316",
-      "supplyEvents": [],
-      "label": "NFT 1987316",
-      "role": "historical",
+      "supplyEvents": [
+        {
+          "tokenId": "1987316",
+          "id": "manual-ui-mint-1987316",
+          "kind": "mint",
+          "at": "2026-09-06T03:34:35.000Z",
+          "blockNumber": "55659946",
+          "transactionHash": "0x682e1a34accbb01a7bfd70a971815167287a2e2897747abe8e8de541fbd4cf25",
+          "amounts": {
+            "spy": 0,
+            "pair": 3130.3005227071885
+          },
+          "mark": {
+            "spyUsdg": 773.8012658000083,
+            "pairUsdg": 0.03570424319741244,
+            "quality": "nearest_prior_canonical_pool_swaps"
+          },
+          "source": "decoded_modify_liquidity_delta_plus_receipt_wallet_delta",
+          "quality": "verified_single_sided_wallet_delta"
+        }
+      ],
+      "label": "已撤高位单边仓",
+      "role": "retired-upper-single-sided",
       "poolKind": "pair-spy",
       "tickLower": 93000,
       "tickUpper": 99600,
@@ -2004,8 +2091,8 @@
             "one": 0
           },
           "mark": {
-            "spyUsdg": 771.3778559175927,
-            "pairUsdg": 0.03781590456851971,
+            "spyUsdg": 773.6518299148884,
+            "pairUsdg": 0.03792738350586973,
             "quality": "operation_build_tick_plus_nearest_spy_mark"
           },
           "source": "local_execution_record",
@@ -2026,7 +2113,45 @@
       },
       "localState": {
         "status": "active",
-        "source": null
+        "source": "verified portfolio ledger imported for migration settlement"
+      },
+      "exit": {
+        "at": "2026-09-07T16:11:53.233Z",
+        "blockNumber": "56966769",
+        "transactionHash": "0x399496605b5a2f358b44418aba7689d8a6fba93a9d63bb089452d32c53ab231c",
+        "grossRaw": {
+          "spyWei": "0",
+          "pairWei": "8155399466668266488530"
+        },
+        "source": "local_execution_record",
+        "quality": "confirmed_receipt_and_liquidity_zero",
+        "mark": {
+          "spyUsdg": 771.00948,
+          "pairUsdg": 0.01396986,
+          "quality": "operation_preflight_snapshot"
+        },
+        "grossAmounts": {
+          "eth": 0,
+          "spy": 0,
+          "pair": 8155.3994666682665,
+          "usdg": 0,
+          "one": 0
+        },
+        "terminalFeeAmounts": {
+          "eth": 0,
+          "spy": 0,
+          "pair": 0,
+          "usdg": 0,
+          "one": 0
+        },
+        "principalAmounts": {
+          "eth": 0,
+          "spy": 0,
+          "pair": 8155.3994666682665,
+          "usdg": 0,
+          "one": 0
+        },
+        "amountQuality": "derived_gross_wallet_delta_minus_preflight_fee_growth"
       },
       "poolId": "0xf224a070c8626c890a085b258cf562ee4bf052b6d1d59104b3b44d722640c001",
       "poolLabel": "PAIR / SPY",
@@ -2037,8 +2162,8 @@
         "tickSpacing": 200,
         "hooks": "0x16D1560630Ce74af4478d9b8AD46548A092A2000"
       },
-      "lastKnownStatus": "active",
-      "lastKnownLiquidity": "490976196883622467442",
+      "lastKnownStatus": "empty",
+      "lastKnownLiquidity": "0",
       "owner": "0xe864237f450E3C813EB6C5652106EC3AFd9Bc919",
       "chainDataQuality": "verified_same_safe_block"
     },
@@ -2183,8 +2308,8 @@
             "one": 0
           },
           "mark": {
-            "spyUsdg": 771.3778559175927,
-            "pairUsdg": 0.039576182886652794,
+            "spyUsdg": 773.6423260668544,
+            "pairUsdg": 0.03969236341229407,
             "quality": "operation_build_tick_plus_nearest_spy_mark"
           },
           "source": "local_execution_record",
@@ -2192,8 +2317,8 @@
           "note": "Gross liquidity input includes wallet spend plus fees compounded from NFT 2008008."
         }
       ],
-      "label": "高位补隙主仓",
-      "role": "upper-gap-fill",
+      "label": "已撤高位补隙主仓",
+      "role": "retired-upper-gap-fill",
       "poolKind": "pair-spy",
       "tickLower": 94600,
       "tickUpper": 97400,
@@ -2206,6 +2331,44 @@
       "localState": {
         "status": "active",
         "source": "PAIR bought with the explicitly authorized SPY amount and paired with the required wallet SPY; pre-existing wallet PAIR excluded"
+      },
+      "exit": {
+        "at": "2026-09-07T11:18:39.689Z",
+        "blockNumber": "56792540",
+        "transactionHash": "0xe60982ad866a48cc97de577802bd0d418c3e76cf806582f2e8900c17361ad383",
+        "grossRaw": {
+          "spyWei": "0",
+          "pairWei": "13923920555757278954890"
+        },
+        "source": "local_execution_record",
+        "quality": "confirmed_receipt_and_liquidity_zero",
+        "mark": {
+          "spyUsdg": 772.7588,
+          "pairUsdg": 0.01804115,
+          "quality": "operation_preflight_snapshot"
+        },
+        "grossAmounts": {
+          "eth": 0,
+          "spy": 0,
+          "pair": 13923.920555757279,
+          "usdg": 0,
+          "one": 0
+        },
+        "terminalFeeAmounts": {
+          "eth": 0,
+          "spy": 0,
+          "pair": 0,
+          "usdg": 0,
+          "one": 0
+        },
+        "principalAmounts": {
+          "eth": 0,
+          "spy": 0,
+          "pair": 13923.920555757279,
+          "usdg": 0,
+          "one": 0
+        },
+        "amountQuality": "derived_gross_wallet_delta_minus_preflight_fee_growth"
       },
       "entryRange": {
         "low": 0.04557011,
@@ -2221,8 +2384,8 @@
         "tickSpacing": 200,
         "hooks": "0x16D1560630Ce74af4478d9b8AD46548A092A2000"
       },
-      "lastKnownStatus": "active",
-      "lastKnownLiquidity": "818071654502223792767",
+      "lastKnownStatus": "empty",
+      "lastKnownLiquidity": "0",
       "owner": "0xe864237f450E3C813EB6C5652106EC3AFd9Bc919",
       "chainDataQuality": "verified_same_safe_block"
     },
@@ -2283,6 +2446,148 @@
       },
       "lastKnownStatus": "active",
       "lastKnownLiquidity": "139346416130588905913",
+      "owner": "0xe864237f450E3C813EB6C5652106EC3AFd9Bc919",
+      "chainDataQuality": "verified_same_safe_block"
+    },
+    {
+      "tokenId": "2096314",
+      "supplyEvents": [
+        {
+          "id": "attack-roll-20260907T111827896Z",
+          "kind": "mint",
+          "at": "2026-09-07T11:18:39.689Z",
+          "blockNumber": "56792608",
+          "transactionHash": "0x0db7d6458053fe5700d5527e2dd24c5cc3b84fa8dac19c9925972a74d241726b",
+          "amounts": {
+            "eth": 0,
+            "spy": 0.14718161179995892,
+            "pair": 6186.0374843799555,
+            "usdg": 0,
+            "one": 0
+          },
+          "mark": {
+            "spyUsdg": 772.7414,
+            "pairUsdg": 0.01802272,
+            "quality": "operation_snapshot"
+          },
+          "source": "local_execution_record",
+          "quality": "underlying_after_mint",
+          "note": null
+        }
+      ],
+      "label": "回调再平衡主仓",
+      "role": "rebased-main",
+      "poolKind": "pair-spy",
+      "tickLower": 103600,
+      "tickUpper": 109800,
+      "mint": {
+        "blockNumber": "56792608",
+        "transactionHash": "0x0db7d6458053fe5700d5527e2dd24c5cc3b84fa8dac19c9925972a74d241726b",
+        "at": "2026-09-07T11:18:36.000Z",
+        "source": "PositionManager Transfer mint"
+      },
+      "localState": {
+        "status": "active",
+        "source": "principal and fees withdrawn from NFT 2008008; pre-existing wallet tokens excluded"
+      },
+      "entryRange": {
+        "low": 0.01317405,
+        "high": 0.02448884,
+        "quality": "operation_snapshot"
+      },
+      "poolId": "0xf224a070c8626c890a085b258cf562ee4bf052b6d1d59104b3b44d722640c001",
+      "poolLabel": "PAIR / SPY",
+      "poolKey": {
+        "currency0": "0x117cc2133c37B721F49dE2A7a74833232B3B4C0C",
+        "currency1": "0x6b1d42927B1a84eC28Fa88d4fC6FA7AF404966be",
+        "feePips": 10000,
+        "tickSpacing": 200,
+        "hooks": "0x16D1560630Ce74af4478d9b8AD46548A092A2000"
+      },
+      "lastKnownStatus": "active",
+      "lastKnownLiquidity": "210169597018326120049",
+      "owner": "0xe864237f450E3C813EB6C5652106EC3AFd9Bc919",
+      "chainDataQuality": "verified_same_safe_block"
+    },
+    {
+      "tokenId": "2117000",
+      "supplyEvents": [
+        {
+          "id": "attack-roll-20260907T161121767Z",
+          "kind": "mint",
+          "at": "2026-09-07T16:11:53.233Z",
+          "blockNumber": "56966957",
+          "transactionHash": "0x085a2b4ac90f7d1f0e9d25ddf8db72ccaacac976df96742e0503c9c1a2161881",
+          "amounts": {
+            "eth": 0,
+            "spy": 0.07531756316313705,
+            "pair": 2985.4050217675085,
+            "usdg": 0,
+            "one": 0
+          },
+          "mark": {
+            "spyUsdg": 771.00972,
+            "pairUsdg": 0.01397265,
+            "quality": "operation_snapshot"
+          },
+          "source": "local_execution_record",
+          "quality": "underlying_after_mint",
+          "note": null
+        },
+        {
+          "id": "attack-roll-20260907T161121767Z-residual-1",
+          "kind": "increase",
+          "at": "2026-09-07T16:15:15.681Z",
+          "blockNumber": "56968945",
+          "transactionHash": "0x760d50b3c22fcade11cbb63ef0250370b33999d55818159426f8ad3cd4407f32",
+          "amounts": {
+            "eth": 0,
+            "spy": 0.010467382547985528,
+            "pair": 353.31481021243974,
+            "usdg": 0,
+            "one": 0
+          },
+          "mark": {
+            "spyUsdg": 773.6423260668544,
+            "pairUsdg": 0.039458879596677224,
+            "quality": "nearest_prior_canonical_swap"
+          },
+          "source": "local_execution_record",
+          "quality": "underlying_after_increase",
+          "note": null
+        }
+      ],
+      "label": "回撤承接仓",
+      "role": "lower-rebased",
+      "poolKind": "pair-spy",
+      "tickLower": 106800,
+      "tickUpper": 112600,
+      "mint": {
+        "blockNumber": "56966957",
+        "transactionHash": "0x085a2b4ac90f7d1f0e9d25ddf8db72ccaacac976df96742e0503c9c1a2161881",
+        "at": "2026-09-07T16:11:44.000Z",
+        "source": "PositionManager Transfer mint"
+      },
+      "localState": {
+        "status": "active",
+        "source": "principal and fees withdrawn from NFT 1988669; pre-existing wallet tokens excluded"
+      },
+      "entryRange": {
+        "low": 0.00993456,
+        "high": 0.01774298,
+        "quality": "operation_snapshot"
+      },
+      "poolId": "0xf224a070c8626c890a085b258cf562ee4bf052b6d1d59104b3b44d722640c001",
+      "poolLabel": "PAIR / SPY",
+      "poolKey": {
+        "currency0": "0x117cc2133c37B721F49dE2A7a74833232B3B4C0C",
+        "currency1": "0x6b1d42927B1a84eC28Fa88d4fC6FA7AF404966be",
+        "feePips": 10000,
+        "tickSpacing": 200,
+        "hooks": "0x16D1560630Ce74af4478d9b8AD46548A092A2000"
+      },
+      "lastKnownStatus": "active",
+      "lastKnownLiquidity": "127563304859466800862",
       "owner": "0xe864237f450E3C813EB6C5652106EC3AFd9Bc919",
       "chainDataQuality": "verified_same_safe_block"
     }
@@ -2385,10 +2690,28 @@
       "label": "外部钱包撤空 USDG 窄仓、经 SPY 配平后追加高位续航"
     },
     {
+      "from": "1987316",
+      "to": "1988669",
+      "type": "single_sided_roll",
+      "label": "撤空高位单边仓并将本金与已领手续费迁入中高位主仓"
+    },
+    {
       "from": "2006287",
       "to": "2008008",
       "type": "pair_only_consolidation",
       "label": "撤空高位接力仓并将其 PAIR 精确并入高位补隙主仓"
+    },
+    {
+      "from": "2008008",
+      "to": "2096314",
+      "type": "rebased_range_roll",
+      "label": "撤空高位补隙主仓并迁入回调再平衡主仓"
+    },
+    {
+      "from": "1988669",
+      "to": "2117000",
+      "type": "rebased_range_roll",
+      "label": "撤空中高位主仓并迁入回撤承接仓"
     }
   ],
   "feeClaims": [
@@ -3013,8 +3336,8 @@
         "one": 0
       },
       "mark": {
-        "spyUsdg": 771.3778559175927,
-        "pairUsdg": 0.007215363660794836,
+        "spyUsdg": 771.8835112890812,
+        "pairUsdg": 0.012651045484842804,
         "quality": "nearest_prior_canonical_swap"
       },
       "source": "exact_batch_wallet_delta_allocated_by_preflight_fee_growth",
@@ -3038,8 +3361,8 @@
         "one": 0
       },
       "mark": {
-        "spyUsdg": 771.3778559175927,
-        "pairUsdg": 0.007215363660794836,
+        "spyUsdg": 771.8835112890812,
+        "pairUsdg": 0.012651045484842804,
         "quality": "nearest_prior_canonical_swap"
       },
       "source": "exact_batch_wallet_delta_allocated_by_preflight_fee_growth",
@@ -3063,8 +3386,8 @@
         "one": 0
       },
       "mark": {
-        "spyUsdg": 771.3778559175927,
-        "pairUsdg": 0.007215363660794836,
+        "spyUsdg": 771.8835112890812,
+        "pairUsdg": 0.012651045484842804,
         "quality": "nearest_prior_canonical_swap"
       },
       "source": "exact_batch_wallet_delta_allocated_by_preflight_fee_growth",
@@ -3088,8 +3411,8 @@
         "one": 0
       },
       "mark": {
-        "spyUsdg": 771.3778559175927,
-        "pairUsdg": 0.007215363660794836,
+        "spyUsdg": 771.8835112890812,
+        "pairUsdg": 0.012651045484842804,
         "quality": "nearest_prior_canonical_swap"
       },
       "source": "exact_batch_wallet_delta_allocated_by_preflight_fee_growth",
@@ -3113,8 +3436,8 @@
         "one": 0
       },
       "mark": {
-        "spyUsdg": 771.3778559175927,
-        "pairUsdg": 0.007215363660794836,
+        "spyUsdg": 771.8835112890812,
+        "pairUsdg": 0.012651045484842804,
         "quality": "nearest_prior_canonical_swap"
       },
       "source": "exact_batch_wallet_delta_allocated_by_preflight_fee_growth",
@@ -3138,8 +3461,8 @@
         "one": 0
       },
       "mark": {
-        "spyUsdg": 771.3778559175927,
-        "pairUsdg": 0.007215363660794836,
+        "spyUsdg": 771.8835112890812,
+        "pairUsdg": 0.012651045484842804,
         "quality": "nearest_prior_canonical_swap"
       },
       "source": "exact_batch_wallet_delta_allocated_by_preflight_fee_growth",
@@ -3163,8 +3486,8 @@
         "one": 0
       },
       "mark": {
-        "spyUsdg": 771.3778559175927,
-        "pairUsdg": 0.007215363660794836,
+        "spyUsdg": 771.8835112890812,
+        "pairUsdg": 0.012651045484842804,
         "quality": "nearest_prior_canonical_swap"
       },
       "source": "exact_batch_wallet_delta_allocated_by_preflight_fee_growth",
@@ -3188,8 +3511,8 @@
         "one": 0
       },
       "mark": {
-        "spyUsdg": 771.3778559175927,
-        "pairUsdg": 0.007215363660794836,
+        "spyUsdg": 772.1026793015459,
+        "pairUsdg": 0.01604523448240159,
         "quality": "nearest_prior_canonical_swap"
       },
       "source": "exact_batch_wallet_delta_allocated_by_preflight_fee_growth",
@@ -3213,8 +3536,8 @@
         "one": 0
       },
       "mark": {
-        "spyUsdg": 771.3778559175927,
-        "pairUsdg": 0.007215363660794836,
+        "spyUsdg": 772.1026793015459,
+        "pairUsdg": 0.01604523448240159,
         "quality": "nearest_prior_canonical_swap"
       },
       "source": "exact_batch_wallet_delta_allocated_by_preflight_fee_growth",
@@ -3238,8 +3561,8 @@
         "one": 0
       },
       "mark": {
-        "spyUsdg": 771.3778559175927,
-        "pairUsdg": 0.007215363660794836,
+        "spyUsdg": 772.1026793015459,
+        "pairUsdg": 0.01604523448240159,
         "quality": "nearest_prior_canonical_swap"
       },
       "source": "exact_batch_wallet_delta_allocated_by_preflight_fee_growth",
@@ -3263,8 +3586,8 @@
         "one": 0
       },
       "mark": {
-        "spyUsdg": 771.3778559175927,
-        "pairUsdg": 0.007215363660794836,
+        "spyUsdg": 772.1026793015459,
+        "pairUsdg": 0.01604523448240159,
         "quality": "nearest_prior_canonical_swap"
       },
       "source": "exact_batch_wallet_delta_allocated_by_preflight_fee_growth",
@@ -3368,6 +3691,30 @@
       "disposition": "reinvested_same_nft"
     },
     {
+      "id": "manual-compound-1983646-55630699",
+      "sourceTokenIds": [
+        "1983646"
+      ],
+      "targetTokenIds": [
+        "1983646"
+      ],
+      "at": "2026-09-06T02:45:26.000Z",
+      "blockNumber": "55630699",
+      "transactionHash": "0x53ef72354161f706152466c39cc4cc412ba355efda703956962c290b3fc3bf33",
+      "amounts": {
+        "spy": 0.011174514902482382,
+        "pair": 322.4941688454046
+      },
+      "mark": {
+        "spyUsdg": 773.8405391433398,
+        "pairUsdg": 0.024809794012683756,
+        "quality": "nearest_prior_canonical_pool_swaps"
+      },
+      "source": "modify_liquidity_tick_math_minus_exact_receipt_wallet_spend",
+      "allocationQuality": "derived_same_position_fee_credit",
+      "disposition": "reinvested_same_nft"
+    },
+    {
       "id": "fees-to-pair-20260906T031654710Z-claim-1785327",
       "sourceTokenIds": [
         "1785327"
@@ -3384,8 +3731,8 @@
         "one": 0
       },
       "mark": {
-        "spyUsdg": 771.3778559175927,
-        "pairUsdg": 0.007215363660794836,
+        "spyUsdg": 773.7326323110678,
+        "pairUsdg": 0.027376749983793563,
         "quality": "nearest_prior_canonical_swap"
       },
       "source": "exact_batch_wallet_delta_allocated_by_preflight_fee_growth",
@@ -3409,8 +3756,8 @@
         "one": 0
       },
       "mark": {
-        "spyUsdg": 771.3778559175927,
-        "pairUsdg": 0.007215363660794836,
+        "spyUsdg": 773.7326323110678,
+        "pairUsdg": 0.027376749983793563,
         "quality": "nearest_prior_canonical_swap"
       },
       "source": "exact_batch_wallet_delta_allocated_by_preflight_fee_growth",
@@ -3434,8 +3781,8 @@
         "one": 0
       },
       "mark": {
-        "spyUsdg": 771.3778559175927,
-        "pairUsdg": 0.007215363660794836,
+        "spyUsdg": 773.7326323110678,
+        "pairUsdg": 0.027376749983793563,
         "quality": "nearest_prior_canonical_swap"
       },
       "source": "exact_batch_wallet_delta_allocated_by_preflight_fee_growth",
@@ -3459,8 +3806,8 @@
         "one": 0
       },
       "mark": {
-        "spyUsdg": 771.3778559175927,
-        "pairUsdg": 0.007215363660794836,
+        "spyUsdg": 773.7326323110678,
+        "pairUsdg": 0.027376749983793563,
         "quality": "nearest_prior_canonical_swap"
       },
       "source": "exact_batch_wallet_delta_allocated_by_preflight_fee_growth",
@@ -3511,8 +3858,8 @@
         "one": 0
       },
       "mark": {
-        "spyUsdg": 771.3778559175927,
-        "pairUsdg": 0.007215363660794836,
+        "spyUsdg": 773.825974213537,
+        "pairUsdg": 0.03368000673357909,
         "quality": "nearest_prior_canonical_swap"
       },
       "source": "exact_batch_wallet_delta_allocated_by_preflight_fee_growth",
@@ -3536,8 +3883,8 @@
         "one": 0
       },
       "mark": {
-        "spyUsdg": 771.3778559175927,
-        "pairUsdg": 0.007215363660794836,
+        "spyUsdg": 773.825974213537,
+        "pairUsdg": 0.03368000673357909,
         "quality": "nearest_prior_canonical_swap"
       },
       "source": "exact_batch_wallet_delta_allocated_by_preflight_fee_growth",
@@ -3563,8 +3910,8 @@
         "one": 0
       },
       "mark": {
-        "spyUsdg": 771.3778559175927,
-        "pairUsdg": 0.03781590456851971,
+        "spyUsdg": 773.6518299148884,
+        "pairUsdg": 0.03792738350586973,
         "quality": "operation_build_tick_plus_nearest_spy_mark"
       },
       "source": "local_fee_growth_record",
@@ -3632,8 +3979,8 @@
         "one": 0
       },
       "mark": {
-        "spyUsdg": 771.3778559175927,
-        "pairUsdg": 0.039576182886652794,
+        "spyUsdg": 773.6423260668544,
+        "pairUsdg": 0.03969236341229407,
         "quality": "operation_build_tick_plus_nearest_spy_mark"
       },
       "source": "local_fee_growth_record",
@@ -3657,8 +4004,8 @@
         "one": 0
       },
       "mark": {
-        "spyUsdg": 771.3778559175927,
-        "pairUsdg": 0.007215363660794836,
+        "spyUsdg": 773.6423260668544,
+        "pairUsdg": 0.039458879596677224,
         "quality": "nearest_prior_canonical_swap"
       },
       "source": "exact_batch_wallet_delta_allocated_by_preflight_fee_growth",
@@ -3682,8 +4029,8 @@
         "one": 0
       },
       "mark": {
-        "spyUsdg": 771.3778559175927,
-        "pairUsdg": 0.007215363660794836,
+        "spyUsdg": 773.6423260668544,
+        "pairUsdg": 0.039458879596677224,
         "quality": "nearest_prior_canonical_swap"
       },
       "source": "exact_batch_wallet_delta_allocated_by_preflight_fee_growth",
@@ -3707,8 +4054,8 @@
         "one": 0
       },
       "mark": {
-        "spyUsdg": 771.3778559175927,
-        "pairUsdg": 0.007215363660794836,
+        "spyUsdg": 773.6423260668544,
+        "pairUsdg": 0.039458879596677224,
         "quality": "nearest_prior_canonical_swap"
       },
       "source": "exact_batch_wallet_delta_allocated_by_preflight_fee_growth",
@@ -3734,8 +4081,8 @@
         "one": 0
       },
       "mark": {
-        "spyUsdg": 771.3778559175927,
-        "pairUsdg": 0.022469431785402356,
+        "spyUsdg": 773.6423260668544,
+        "pairUsdg": 0.022535393437216163,
         "quality": "operation_build_tick_plus_nearest_spy_mark"
       },
       "source": "local_fee_growth_record",
@@ -5449,6 +5796,31 @@
       }
     },
     {
+      "at": "2026-09-04T15:51:49.000Z",
+      "blockNumber": "54385836",
+      "hash": "0xe9e21074d816fff96e6d13ead95c7c4a52ba5566e0ceba40543c5eacad1b9a73",
+      "label": "外部钱包撤空 NFT 1615859",
+      "status": "success",
+      "gasCostWei": "38382428856000",
+      "action": "remove",
+      "actor": "external_wallet_signer_unknown_to_this_executor",
+      "valueEth": 0,
+      "evidence": "canonical_transaction_and_receipt_readback",
+      "evidenceRank": 5,
+      "gasUsed": "101636",
+      "effectiveGasPrice": "377646000",
+      "from": "0xe864237f450e3c813eb6c5652106ec3afd9bc919",
+      "to": "0x58daec3116aae6d93017baaea7749052e8a04fa7",
+      "nonce": 84,
+      "capitalFlow": null,
+      "reconciliation": {
+        "localStatus": "success",
+        "localBlockNumber": "54385836",
+        "localGasCostWei": "38382428856000",
+        "matches": true
+      }
+    },
+    {
       "at": "2026-09-05T00:20:01.942Z",
       "blockNumber": "54687431",
       "hash": "0x0e56375f38f3182c6c4311ca810758615c9012dd5965a37d383ad4298429d705",
@@ -7016,6 +7388,270 @@
         "localStatus": "success",
         "localBlockNumber": "56527394",
         "localGasCostWei": "80750890956000",
+        "matches": true
+      }
+    },
+    {
+      "at": "2026-09-07T11:18:29.446Z",
+      "blockNumber": "56792540",
+      "hash": "0xe60982ad866a48cc97de577802bd0d418c3e76cf806582f2e8900c17361ad383",
+      "label": "进攻仓撤出第 3 LP NFT 2008008 (attack-roll-20260907T111827896Z)",
+      "status": "success",
+      "gasUsed": "101881",
+      "effectiveGasPrice": "310700000",
+      "gasCostWei": "31654426700000",
+      "valueEth": 0,
+      "action": "remove",
+      "capitalFlow": null,
+      "evidence": "canonical_transaction_and_receipt_readback",
+      "evidenceRank": 5,
+      "from": "0xe864237f450e3c813eb6c5652106ec3afd9bc919",
+      "to": "0x58daec3116aae6d93017baaea7749052e8a04fa7",
+      "nonce": 170,
+      "reconciliation": {
+        "localStatus": "success",
+        "localBlockNumber": "56792540",
+        "localGasCostWei": "31654426700000",
+        "matches": true
+      }
+    },
+    {
+      "at": "2026-09-07T11:18:32.769Z",
+      "blockNumber": "56792573",
+      "hash": "0x3fc2f524048e6b89c586b95f6ca98b00f28bf8b0e9727ecc676cf4a9c93599bf",
+      "label": "进攻仓授权路由使用 PAIR (attack-roll-20260907T111827896Z)",
+      "status": "success",
+      "gasUsed": "30574",
+      "effectiveGasPrice": "312544000",
+      "gasCostWei": "9555720256000",
+      "valueEth": 0,
+      "action": "approval",
+      "capitalFlow": null,
+      "evidence": "canonical_transaction_and_receipt_readback",
+      "evidenceRank": 5,
+      "from": "0xe864237f450e3c813eb6c5652106ec3afd9bc919",
+      "to": "0x000000000022d473030f116ddee9f6b43ac78ba3",
+      "nonce": 171,
+      "reconciliation": {
+        "localStatus": "success",
+        "localBlockNumber": "56792573",
+        "localGasCostWei": "9555720256000",
+        "matches": true
+      }
+    },
+    {
+      "at": "2026-09-07T11:18:34.181Z",
+      "blockNumber": "56792586",
+      "hash": "0xde82f78db7210d5838c41d033d7ba3cfa468aa56f266537345e72299efec4487",
+      "label": "进攻仓配平 PAIR→SPY (attack-roll-20260907T111827896Z)",
+      "status": "success",
+      "gasUsed": "147598",
+      "effectiveGasPrice": "315982000",
+      "gasCostWei": "46638311236000",
+      "valueEth": 0,
+      "action": "swap",
+      "capitalFlow": null,
+      "evidence": "canonical_transaction_and_receipt_readback",
+      "evidenceRank": 5,
+      "from": "0xe864237f450e3c813eb6c5652106ec3afd9bc919",
+      "to": "0x8876789976decbfcbbbe364623c63652db8c0904",
+      "nonce": 172,
+      "reconciliation": {
+        "localStatus": "success",
+        "localBlockNumber": "56792586",
+        "localGasCostWei": "46638311236000",
+        "matches": true
+      }
+    },
+    {
+      "at": "2026-09-07T11:18:36.404Z",
+      "blockNumber": "56792608",
+      "hash": "0x0db7d6458053fe5700d5527e2dd24c5cc3b84fa8dac19c9925972a74d241726b",
+      "label": "进攻仓铸造 PAIR/SPY LP (attack-roll-20260907T111827896Z)",
+      "status": "success",
+      "gasUsed": "355116",
+      "effectiveGasPrice": "309378000",
+      "gasCostWei": "109865077848000",
+      "valueEth": 0,
+      "action": "mint",
+      "capitalFlow": null,
+      "evidence": "canonical_transaction_and_receipt_readback",
+      "evidenceRank": 5,
+      "from": "0xe864237f450e3c813eb6c5652106ec3afd9bc919",
+      "to": "0x58daec3116aae6d93017baaea7749052e8a04fa7",
+      "nonce": 173,
+      "reconciliation": {
+        "localStatus": "success",
+        "localBlockNumber": "56792608",
+        "localGasCostWei": "109865077848000",
+        "matches": true
+      }
+    },
+    {
+      "at": "2026-09-07T16:11:27.022Z",
+      "blockNumber": "56966769",
+      "hash": "0x399496605b5a2f358b44418aba7689d8a6fba93a9d63bb089452d32c53ab231c",
+      "label": "进攻仓撤出第 3 LP NFT 1988669 (attack-roll-20260907T161121767Z)",
+      "status": "success",
+      "gasUsed": "105056",
+      "effectiveGasPrice": "305698000",
+      "gasCostWei": "32115409088000",
+      "valueEth": 0,
+      "action": "remove",
+      "capitalFlow": null,
+      "evidence": "canonical_transaction_and_receipt_readback",
+      "evidenceRank": 5,
+      "from": "0xe864237f450e3c813eb6c5652106ec3afd9bc919",
+      "to": "0x58daec3116aae6d93017baaea7749052e8a04fa7",
+      "nonce": 176,
+      "reconciliation": {
+        "localStatus": "success",
+        "localBlockNumber": "56966769",
+        "localGasCostWei": "32115409088000",
+        "matches": true
+      }
+    },
+    {
+      "at": "2026-09-07T16:11:37.014Z",
+      "blockNumber": "56966868",
+      "hash": "0x4fe55a57fb87d2704c9dfb774bc77fbc60760abfbfa1d0377ca9ef91cd0ae456",
+      "label": "进攻仓授权路由使用 PAIR (attack-roll-20260907T161121767Z)",
+      "status": "success",
+      "gasUsed": "30574",
+      "effectiveGasPrice": "304814000",
+      "gasCostWei": "9319383236000",
+      "valueEth": 0,
+      "action": "approval",
+      "capitalFlow": null,
+      "evidence": "canonical_transaction_and_receipt_readback",
+      "evidenceRank": 5,
+      "from": "0xe864237f450e3c813eb6c5652106ec3afd9bc919",
+      "to": "0x000000000022d473030f116ddee9f6b43ac78ba3",
+      "nonce": 177,
+      "reconciliation": {
+        "localStatus": "success",
+        "localBlockNumber": "56966868",
+        "localGasCostWei": "9319383236000",
+        "matches": true
+      }
+    },
+    {
+      "at": "2026-09-07T16:11:40.509Z",
+      "blockNumber": "56966907",
+      "hash": "0x13e09dc646bbc5dede5b0f0d9305f9d21d0f293eda1d818c210fdbb9b885c0af",
+      "label": "进攻仓配平 PAIR→SPY (attack-roll-20260907T161121767Z)",
+      "status": "success",
+      "gasUsed": "164662",
+      "effectiveGasPrice": "305794000",
+      "gasCostWei": "50352651628000",
+      "valueEth": 0,
+      "action": "swap",
+      "capitalFlow": null,
+      "evidence": "canonical_transaction_and_receipt_readback",
+      "evidenceRank": 5,
+      "from": "0xe864237f450e3c813eb6c5652106ec3afd9bc919",
+      "to": "0x8876789976decbfcbbbe364623c63652db8c0904",
+      "nonce": 178,
+      "reconciliation": {
+        "localStatus": "success",
+        "localBlockNumber": "56966907",
+        "localGasCostWei": "50352651628000",
+        "matches": true
+      }
+    },
+    {
+      "at": "2026-09-07T16:11:45.536Z",
+      "blockNumber": "56966957",
+      "hash": "0x085a2b4ac90f7d1f0e9d25ddf8db72ccaacac976df96742e0503c9c1a2161881",
+      "label": "进攻仓铸造 PAIR/SPY LP (attack-roll-20260907T161121767Z)",
+      "status": "success",
+      "gasUsed": "355782",
+      "effectiveGasPrice": "305502000",
+      "gasCostWei": "108692112564000",
+      "valueEth": 0,
+      "action": "mint",
+      "capitalFlow": null,
+      "evidence": "canonical_transaction_and_receipt_readback",
+      "evidenceRank": 5,
+      "from": "0xe864237f450e3c813eb6c5652106ec3afd9bc919",
+      "to": "0x58daec3116aae6d93017baaea7749052e8a04fa7",
+      "nonce": 179,
+      "reconciliation": {
+        "localStatus": "success",
+        "localBlockNumber": "56966957",
+        "localGasCostWei": "108692112564000",
+        "matches": true
+      }
+    },
+    {
+      "at": "2026-09-07T16:15:01.488Z",
+      "blockNumber": "56968872",
+      "hash": "0x84b185a1c2a9d2a5b5462f2d37e672339cfc8d81f9d328868c80b4bb40ad3a39",
+      "label": "迁移残余授权路由使用 PAIR (roll-residual-2117000-20260907T161451542Z)",
+      "status": "success",
+      "gasUsed": "30562",
+      "effectiveGasPrice": "305162000",
+      "gasCostWei": "9326361044000",
+      "valueEth": 0,
+      "action": "approval",
+      "capitalFlow": null,
+      "evidence": "canonical_transaction_and_receipt_readback",
+      "evidenceRank": 5,
+      "from": "0xe864237f450e3c813eb6c5652106ec3afd9bc919",
+      "to": "0x000000000022d473030f116ddee9f6b43ac78ba3",
+      "nonce": 180,
+      "reconciliation": {
+        "localStatus": "success",
+        "localBlockNumber": "56968872",
+        "localGasCostWei": "9326361044000",
+        "matches": true
+      }
+    },
+    {
+      "at": "2026-09-07T16:15:04.277Z",
+      "blockNumber": "56968899",
+      "hash": "0xb4654b149a71dee1a057622ab385e8c1a4ee5528894ac282cfe541986daeecd1",
+      "label": "迁移残余配平 PAIR→SPY (roll-residual-2117000-20260907T161451542Z)",
+      "status": "success",
+      "gasUsed": "147594",
+      "effectiveGasPrice": "308016000",
+      "gasCostWei": "45461313504000",
+      "valueEth": 0,
+      "action": "swap",
+      "capitalFlow": null,
+      "evidence": "canonical_transaction_and_receipt_readback",
+      "evidenceRank": 5,
+      "from": "0xe864237f450e3c813eb6c5652106ec3afd9bc919",
+      "to": "0x8876789976decbfcbbbe364623c63652db8c0904",
+      "nonce": 181,
+      "reconciliation": {
+        "localStatus": "success",
+        "localBlockNumber": "56968899",
+        "localGasCostWei": "45461313504000",
+        "matches": true
+      }
+    },
+    {
+      "at": "2026-09-07T16:15:08.804Z",
+      "blockNumber": "56968945",
+      "hash": "0x760d50b3c22fcade11cbb63ef0250370b33999d55818159426f8ad3cd4407f32",
+      "label": "迁移残余追加 NFT 2117000 (roll-residual-2117000-20260907T161451542Z)",
+      "status": "success",
+      "gasUsed": "265930",
+      "effectiveGasPrice": "308636000",
+      "gasCostWei": "82075571480000",
+      "valueEth": 0,
+      "action": "increase",
+      "capitalFlow": null,
+      "evidence": "canonical_transaction_and_receipt_readback",
+      "evidenceRank": 5,
+      "from": "0xe864237f450e3c813eb6c5652106ec3afd9bc919",
+      "to": "0x58daec3116aae6d93017baaea7749052e8a04fa7",
+      "nonce": 182,
+      "reconciliation": {
+        "localStatus": "success",
+        "localBlockNumber": "56968945",
+        "localGasCostWei": "82075571480000",
         "matches": true
       }
     }

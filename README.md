@@ -43,8 +43,8 @@ npm ci --ignore-scripts --no-audit --no-fund
 npm run check
 ```
 
-`npm run check` enforces repository formatting, ESLint, strict JavaScript type checking for the new
-safety-critical guard modules, 24 business tests, and public-ledger completeness assertions. GitHub
+`npm run check` enforces repository formatting, ESLint, strict JavaScript type checking for the
+safety-critical guard and read-model modules, the full business test suite, and public-ledger completeness assertions. GitHub
 Actions runs the same gate for every push and pull request, plus a dashboard process/static-UI smoke test.
 The production dashboard dependency tree is separately blocked on high-severity audit findings with
 `npm run security:audit:dashboard`.
@@ -53,8 +53,10 @@ Useful read-only commands:
 
 ```shell
 npm run portfolio:verify
+npm run funds:audit
 npm run lp:status
 npm run liquidity-map
+npm run trend:scenarios
 npm run dashboard
 ```
 
@@ -90,7 +92,13 @@ The Node service serves the UI and JSON endpoints; Nginx is the public reverse p
 - `/livez` proves only that the process is alive.
 - `/readyz` returns success only when usable data is current.
 - `/healthz` carries the detailed refresh state and returns failure for stale/unready data.
+- `/api/inventory` exposes the PositionManager Transfer index and same-safe-block ownership reconciliation.
+- `/api/trend` exposes the versioned, read-only `$0.01`-centred range model.
 - `/api/portfolio` exposes the public lifecycle ledger and same-safe-block position readback.
+
+The server discovers newly received/minted and withdrawn PositionManager NFTs automatically. It does
+not invent a cost basis for an unclassified NFT: accounting remains `UNKNOWN_EXTERNAL_ORIGIN` until an
+audited ledger event attributes the capital.
 
 Production deployment is deliberately manual and credential-free from GitHub. Follow the
 [deployment runbook](docs/runbooks/deploy-dashboard.md). Passing CI proves repository quality; only the
