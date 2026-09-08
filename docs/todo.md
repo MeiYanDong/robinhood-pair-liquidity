@@ -502,3 +502,25 @@
 Story A–D 与 Story E 的生产刷新主链路已经完成。当前下一步是 48 小时稳定性观察，并在下一次
 自然 mint/转出发生时验证事件级自动发现；持续 Shadow daemon、通知与任何签名执行仍属于后续
 独立阶段，不在本轮只读发布范围内。
+
+## 阶段 11：独立 PAIR/USDG 实盘账户公开投影
+
+该阶段只把另一个服务器上已经存在的有限马丁实盘账户投影到公共只读面板；它不把签名能力或
+私有 Keeper 状态复制到面板服务器，也不改变阶段 9 对本仓库内执行器的授权边界。
+
+- [x] 在公开配置中登记策略 ID、钱包、PAIR/USDG 1% pool、扫描起点和预期 5 档；不登记 NFT
+      tokenId。
+- [x] 每个外部策略使用独立 SQLite identity、Transfer 游标、重组检测和安全区块对账。
+- [x] 自动发现真实换档 `#2183929 → #2193494`，本地实链冒烟得到 balance/indexed/verified
+      `5/5/5`，同时保留 1 个历史 owner-mismatch NFT。
+- [x] 在 snapshot schema v5 和 `/api/strategies` 输出当前区间、本金、未领取费用、钱包闲置资产、
+      lifecycle 和证据边界。
+- [x] 前端新增自动策略账户区，展示 5 档区间与 BUY/SELL 等待状态；继续复用后端 60 秒快照与
+      前端轻量轮询，不需要 Codex 更新。
+- [x] 成本基础固定为 `UNKNOWN_NOT_IN_PUBLIC_LEDGER`，Keeper 健康固定为
+      `NOT_OBSERVED_BY_DASHBOARD`，不从链上余额倒推。
+- [x] 外部策略 `PARTIAL` 独立降级，不单独阻断旧钱包 readiness。
+- [x] 增加配置路径安全、未知 pool、重复 ID、无配置 NFT 自动发现和只读边界测试。
+- [ ] GitHub CI 对本变更提交通过。
+- [ ] 发布到公网面板，核验 `/readyz`、`/api/strategies`、首页与连续至少 3 个刷新周期。
+- [ ] 为生产 `strategy-inventory-*.sqlite` 建一致性备份并核验 `PRAGMA integrity_check`。

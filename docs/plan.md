@@ -886,3 +886,18 @@ Trend Decision ──> Intent/Simulation ──> Isolated Signer ──> Receipt
 - 会计口径改变，导致历史收益可比性中断。
 
 需求实现顺序、逐项文件、命令与验收门禁见 [`docs/todo.md`](./todo.md)。
+
+## 19. 独立实盘账户的只读投影扩展
+
+后续已在独立仓库和独立服务器上线的 `PAIR / USDG 有限马丁实盘` 不改变本文原趋势执行器的
+授权状态。本公开面板只增加一个跨账户 read model，采用以下固定边界：
+
+- 配置公开钱包、pool 和 Transfer 扫描起点，不配置会随换档变化的 NFT tokenId；
+- 为每个外部策略使用独立 SQLite identity 和游标，避免污染原钱包的历史总账；
+- 每轮在同一安全区块核验 `balanceOf/ownerOf/liquidity/pool-info`，并读取本金与未领取 feeGrowth；
+- 自动展示新增、撤走、burn 和替换仓位，成本基础没有公开证据时保持 `UNKNOWN`；
+- 私钥、待签 intent、nonce 恢复状态、告警凭证和私有 Keeper 日志不进入面板服务器；
+- 外部策略状态独立降级，主钱包已有可信快照不因一次正常的两笔换档短窗被整体判为不可用。
+
+该扩展采用 snapshot schema v5 与 `/api/strategies`，详细取舍见
+[`ADR 0004`](./adr/0004-external-strategy-accounts.md)。

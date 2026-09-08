@@ -5,6 +5,11 @@ Robinhood Chain 的安全区块上读取 PAIR/SPY、PAIR/USDG 池、钱包全部
 并把增量 Swap 历史保存到 SQLite。网页每 5 秒拉取一次服务状态；服务默认每 60 秒追块，
 快照落后链头 128 个块，以避开高出块频率下的节点同步抖动和短重组。
 
+面板还以独立只读账户展示专用 PAIR/USDG 有限马丁钱包。该账户不借用旧钱包总账，而是从
+配置的公开起始区块自动发现 PositionManager NFT，并在每个安全快照重新核验区间、本金与未领取
+费用。公开服务不连接私有 Keeper 目录，因此链上状态可以是 `VERIFIED`，成本基础和 Keeper
+运行健康仍分别标为 `UNKNOWN_NOT_IN_PUBLIC_LEDGER` 与 `NOT_OBSERVED_BY_DASHBOARD`。
+
 面板同时读取 PAIR/USDG 1% 与 3% 两个候选池，以我们当前本金和四个美元价格区间做
 同口径静态映射。对照不是照搬 Uniswap 全池 APR，而是把各池 Swap 按价格段归因到当前
 流动性，并估算同一笔资金能捕获的费用。策略门槛固定为：6 小时和 24 小时窗口都完整、
@@ -44,6 +49,9 @@ feeGrowth；它们不会混入“同本金候选模拟仓”的比较口径。
   的 `balanceOf`、`ownerOf`、liquidity 和 pool info 做闭环核验；不再需要 Codex 手工更新面板。
 - 自动发现但尚未进入审计账本的 NFT 会立即显示当前链上状态，但成本来源固定标为
   `UNKNOWN_EXTERNAL_ORIGIN`，直到公开账本补齐证据，避免把未知本金误算成手续费或零成本。
+- `外部策略账户`：每个账户使用独立 SQLite inventory，避免与主钱包游标和历史成本互相污染；
+  NFT 数量、归属、流动性、池和 Tick 均在同一安全区块核验。预期档位数不符只降级该策略，
+  不把主钱包已有的可信快照误报为离线。
 
 ## 生命周期账本
 
@@ -89,6 +97,7 @@ curl http://127.0.0.1:8080/livez
 curl http://127.0.0.1:8080/readyz
 curl 'http://127.0.0.1:8080/api/snapshot?window=24h'
 curl http://127.0.0.1:8080/api/inventory
+curl http://127.0.0.1:8080/api/strategies
 curl http://127.0.0.1:8080/api/trend
 curl http://127.0.0.1:8080/api/portfolio
 ```
@@ -101,6 +110,8 @@ curl http://127.0.0.1:8080/api/portfolio
 生产环境使用 systemd 管理 Node 服务，Nginx 在公网 80 端口反向代理。RPC URL 位于
 `/etc/pair-liquidity-dashboard.env`，文件内容为 `RH_RPC_URL=...`，权限必须是 `0600`。
 SQLite 和最后有效快照位于 `/var/lib/pair-liquidity-dashboard`，发布目录只读。
+除主 `history.sqlite` 外，`strategy-inventory-*.sqlite` 及其 WAL/SHM 文件也属于持久证据，备份时
+必须在服务停止或 SQLite 一致性快照下整体保存。
 
 部署后以三层证据验收：systemd 进程为 active、`/readyz` 为 LIVE、从公网 IP 读取的
 `/api/snapshot` 含持续前进的安全区块。任何一层缺失，都不能称为“已经实时上线”。

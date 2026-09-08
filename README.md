@@ -93,12 +93,19 @@ The Node service serves the UI and JSON endpoints; Nginx is the public reverse p
 - `/readyz` returns success only when usable data is current.
 - `/healthz` carries the detailed refresh state and returns failure for stale/unready data.
 - `/api/inventory` exposes the PositionManager Transfer index and same-safe-block ownership reconciliation.
+- `/api/strategies` exposes isolated, chain-only inventories for configured external LP strategy wallets without importing
+  their signer state or cost ledger.
 - `/api/trend` exposes the versioned, read-only `$0.01`-centred range model.
 - `/api/portfolio` exposes the public lifecycle ledger and same-safe-block position readback.
 
 The server discovers newly received/minted and withdrawn PositionManager NFTs automatically. It does
 not invent a cost basis for an unclassified NFT: accounting remains `UNKNOWN_EXTERNAL_ORIGIN` until an
 audited ledger event attributes the capital.
+
+The dedicated PAIR/USDG finite-martingale account is intentionally separated from the historical PAIR/SPY
+portfolio. Its public view auto-discovers replacement bands from chain events and values current principal
+and fees at one safe block; private keeper liveness and cost basis remain separate evidence domains. See
+[ADR 0004](docs/adr/0004-external-strategy-accounts.md).
 
 Production deployment is deliberately manual and credential-free from GitHub. Follow the
 [deployment runbook](docs/runbooks/deploy-dashboard.md). Passing CI proves repository quality; only the

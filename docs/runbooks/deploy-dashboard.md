@@ -25,9 +25,11 @@
 
 1. 确认 systemd 与 Nginx 均为 `active` 且 `enabled`。
    同时确认当前 release 的 `GIT_COMMIT` 与已通过 CI 的主分支提交完全一致。
-2. 检查公网 `/livez`、`/readyz`、`/api/inventory`、`/api/trend`、`/api/portfolio` 和首页；
+2. 检查公网 `/livez`、`/readyz`、`/api/inventory`、`/api/strategies`、`/api/trend`、`/api/portfolio` 和首页；
    `/readyz` 必须显示 `ready: true`，inventory 必须为 `VERIFIED`，趋势模型必须保持
    `executionAuthorized=false`。
+   `/api/strategies` 中每个外部账户必须单独显示 inventory 数量、当前池和证据等级；策略为
+   `PARTIAL` 时不得伪装为完整，但也不应仅因此把主钱包 readiness 判为失败。
    新进程必须至少成功生成一次自己的安全区块快照，不能仅凭重启前留下的快照通过门禁。
    连续观察至少三个 60 秒刷新周期，确认安全区块持续前进且 journal 没有 RPC 失败循环。
 3. 对比本地与公网 `dashboard/public/app.js` 的 SHA-256。
@@ -46,6 +48,7 @@ CI，不能说已部署。
 
 只有确认新 schema/写入损坏且应用回滚不足时才恢复 SQLite。停止服务后，先给现有数据库制作
 第二份故障现场副本；对目标备份运行 `PRAGMA integrity_check`，再以明确的备份绝对路径替换
-`/var/lib/pair-liquidity-dashboard/history.sqlite`，恢复 `pairdash:pairdash` 与 `0640` 权限，
+`/var/lib/pair-liquidity-dashboard/history.sqlite` 及受影响的 `strategy-inventory-*.sqlite`，恢复
+`pairdash:pairdash` 与 `0640` 权限，
 启动服务并核对 inventory 游标、钱包余额和最新安全区块。数据库恢复会丢弃备份点之后的历史，
 必须有明确故障证据和人工授权，不能作为常规应用回滚步骤。

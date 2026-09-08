@@ -21,6 +21,20 @@ const elements = {
   windowVolumeLabel: document.querySelector('#window-volume-label'),
   windowVolume: document.querySelector('#window-volume'),
   windowGrossFee: document.querySelector('#window-gross-fee'),
+  strategyEvidence: document.querySelector('#strategy-evidence'),
+  strategyWallet: document.querySelector('#strategy-wallet'),
+  strategyPrice: document.querySelector('#strategy-price'),
+  strategyBlock: document.querySelector('#strategy-block'),
+  strategyPrincipal: document.querySelector('#strategy-principal'),
+  strategyAssets: document.querySelector('#strategy-assets'),
+  strategyFees: document.querySelector('#strategy-fees'),
+  strategyFeeAssets: document.querySelector('#strategy-fee-assets'),
+  strategyPositionCount: document.querySelector('#strategy-position-count'),
+  strategyPositionStatus: document.querySelector('#strategy-position-status'),
+  strategyIdle: document.querySelector('#strategy-idle'),
+  strategyGas: document.querySelector('#strategy-gas'),
+  strategyPositions: document.querySelector('#strategy-positions'),
+  strategyNote: document.querySelector('#strategy-note'),
   trendEvidence: document.querySelector('#trend-evidence'),
   trendSignal: document.querySelector('#trend-signal'),
   trendCopy: document.querySelector('#trend-copy'),
@@ -133,6 +147,15 @@ function localTime(value) {
 function shortHash(value) {
   if (!value || value.length < 14) return value || '—'
   return `${value.slice(0, 8)}…${value.slice(-6)}`
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;')
 }
 
 function durationLabel(seconds) {
@@ -485,6 +508,90 @@ function drawTrendModel(data) {
   const now = x(data.pool.pairUsdg)
   plot.append(svg('line', { class: 'trend-now-line', x1: now, x2: now, y1: 0, y2: volumeBottom }))
   plot.append(svg('text', { class: 'trend-now-label', x: now + 5, y: 11 }, 'NOW'))
+}
+
+function renderExternalStrategy(data) {
+  const strategy = data.strategies?.[0]
+  if (!strategy) {
+    elements.strategyEvidence.textContent = 'CHAIN · UNAVAILABLE'
+    elements.strategyEvidence.className = 'boundary-pill boundary-partial'
+    elements.strategyNote.textContent = '当前快照没有外部策略账户；主面板仍可独立工作。'
+    elements.strategyPositions.replaceChildren()
+    return
+  }
+
+  const verified = strategy.status === 'VERIFIED'
+  const totals = strategy.totals || {}
+  const lifecycle = strategy.lifecycleSummary || {}
+  elements.strategyEvidence.textContent = `CHAIN · ${strategy.status}`
+  elements.strategyEvidence.className = `boundary-pill boundary-${verified ? 'verified' : 'partial'}`
+  elements.strategyWallet.textContent = `${strategy.label} · ${shortHash(strategy.wallet)}`
+  elements.strategyPrice.textContent = price(strategy.pool?.pairUsdg)
+  const strategyTick = numberOrNull(strategy.pool?.currentTick)
+  elements.strategyBlock.textContent = `SAFE #${Number(strategy.asOfBlock).toLocaleString('en-US')} · Tick ${
+    strategyTick == null ? '—' : strategyTick.toLocaleString('en-US')
+  }`
+  elements.strategyPrincipal.textContent = money(totals.principalUsdg, 2)
+  elements.strategyAssets.textContent = `USDG ${tokenAmount(totals.principalUsdgToken)} · PAIR ${tokenAmount(
+    totals.principalPair,
+  )}`
+  elements.strategyFees.textContent = money(totals.accruedFeesUsdg, 2)
+  elements.strategyFeeAssets.textContent = `USDG ${tokenAmount(totals.accruedFeeUsdgToken)} · PAIR ${tokenAmount(
+    totals.accruedFeePair,
+  )}`
+  elements.strategyPositionCount.textContent = `${lifecycle.active ?? 0} / ${strategy.expectedActivePositions}`
+  elements.strategyPositionStatus.textContent = `${lifecycle.inRange ?? 0} 档成交中 · ${
+    strategy.inventory?.indexedOwnedCount ?? '—'
+  }/${strategy.inventory?.expectedBalance ?? '—'} NFT 对账`
+  elements.strategyIdle.textContent = money(totals.idleUsdgValue, 2)
+  elements.strategyGas.textContent = `USDG ${tokenAmount(totals.walletBalances?.usdg)} · PAIR ${tokenAmount(
+    totals.walletBalances?.pair,
+  )} · Gas ${tokenAmount(totals.walletBalances?.eth)} ETH`
+
+  elements.strategyPositions.replaceChildren()
+  for (const position of strategy.positions || []) {
+    const currentPrice = Number(strategy.pool?.pairUsdg)
+    const rangeState = position.inRange
+      ? '成交中'
+      : currentPrice > Number(position.priceHighUsdg)
+        ? 'BUY 等待 · USDG'
+        : currentPrice < Number(position.priceLowUsdg)
+          ? 'SELL 等待 · PAIR'
+          : '场外'
+    const row = document.createElement('article')
+    row.className = `strategy-row ${position.inRange ? 'is-in-range' : ''}`
+    row.setAttribute('role', 'row')
+    row.innerHTML = `
+      <div class="strategy-position-id" role="cell">
+        <strong>${position.bandLabel}</strong>
+        <small>NFT #${position.tokenId}</small>
+      </div>
+      <div class="strategy-cell" role="cell">
+        <strong>${price(position.priceLowUsdg)} → ${price(position.priceHighUsdg)}</strong>
+        <small>Tick ${Number(position.tickLower).toLocaleString('en-US')} → ${Number(position.tickUpper).toLocaleString(
+          'en-US',
+        )}</small>
+      </div>
+      <div class="strategy-cell" role="cell">
+        <strong>${rangeState}</strong>
+        <small>${escapeHtml(position.dataQuality === 'verified' ? '同安全区块核验' : position.dataQuality)}</small>
+      </div>
+      <div class="strategy-cell" role="cell">
+        <strong>${money(position.principal?.usdg, 2)}</strong>
+        <small>${tokenAmount(position.principal?.usdgToken)} USDG · ${tokenAmount(position.principal?.pair)} PAIR</small>
+      </div>
+      <div class="strategy-cell" role="cell">
+        <strong>${money(position.accruedFees?.usdg, 2)}</strong>
+        <small>${tokenAmount(position.accruedFees?.usdgToken)} USDG · ${tokenAmount(position.accruedFees?.pair)} PAIR</small>
+      </div>
+    `
+    elements.strategyPositions.append(row)
+  }
+
+  const warningText = strategy.warnings?.length
+    ? `告警：${strategy.warnings.join(' · ')}。`
+    : 'NFT 数量与逐仓读回一致。'
+  elements.strategyNote.textContent = `${warningText} 成本基础未并入公开总账；Keeper 运行健康由私有监控独立验证。`
 }
 
 function renderTrendModel(data) {
@@ -973,6 +1080,7 @@ function render(data) {
   elements.footerUpdate.textContent = `最后有效快照 ${localTime(data.generatedAt)}`
   renderComparison(data)
   renderPortfolio(data)
+  renderExternalStrategy(data)
   renderTrendModel(data)
 
   document.querySelectorAll('[data-window]').forEach((button) => {
