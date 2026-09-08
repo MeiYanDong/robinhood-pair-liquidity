@@ -7,7 +7,7 @@
     <meta name="theme-color" content="#0b0d0c" />
     <title>PAIR / SPY — Live Liquidity Field</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <link rel="stylesheet" href="/styles.css?v=trendinventory0908" />
+    <link rel="stylesheet" href="/styles.css?v=strategyinventory0908" />
   </head>
   <body>
     <div class="noise" aria-hidden="true"></div>
@@ -46,6 +46,60 @@
           <strong id="window-volume">—</strong>
           <small id="window-gross-fee">全池费用估算 —</small>
         </article>
+      </section>
+
+      <section id="strategy-accounts" class="strategy-section reveal" aria-labelledby="strategy-title">
+        <header class="strategy-header">
+          <div>
+            <p class="section-kicker">Auto-discovered external strategy account</p>
+            <h2 id="strategy-title">PAIR / USDG 有限马丁实盘</h2>
+          </div>
+          <div class="strategy-status-stack">
+            <div id="strategy-evidence" class="boundary-pill boundary-partial">CHAIN · LOADING</div>
+            <small id="strategy-wallet">等待链上仓位清单</small>
+          </div>
+        </header>
+        <div class="strategy-metric-grid" aria-label="PAIR USDG 策略账户指标">
+          <article>
+            <p>策略池价格</p>
+            <strong id="strategy-price">—</strong>
+            <small id="strategy-block">等待安全区块</small>
+          </article>
+          <article>
+            <p>当前 LP 本金</p>
+            <strong id="strategy-principal">—</strong>
+            <small id="strategy-assets">USDG — · PAIR —</small>
+          </article>
+          <article>
+            <p>未领取手续费</p>
+            <strong id="strategy-fees">—</strong>
+            <small id="strategy-fee-assets">USDG — · PAIR —</small>
+          </article>
+          <article>
+            <p>链上仓位</p>
+            <strong id="strategy-position-count">—</strong>
+            <small id="strategy-position-status">自动发现新增、撤走与换档</small>
+          </article>
+          <article>
+            <p>钱包闲置</p>
+            <strong id="strategy-idle">—</strong>
+            <small id="strategy-gas">ETH Gas 保留金 —</small>
+          </article>
+        </div>
+        <p class="strategy-scroll-hint">左右滑动查看状态、本金与手续费 →</p>
+        <div class="strategy-table-wrap">
+          <div class="strategy-table-head" aria-hidden="true">
+            <span>档位 / NFT</span>
+            <span>PAIR 价格区间</span>
+            <span>状态</span>
+            <span>本金构成</span>
+            <span>未领取费</span>
+          </div>
+          <div id="strategy-positions" class="strategy-table" role="table" aria-label="PAIR USDG 马丁策略仓位"></div>
+        </div>
+        <p id="strategy-note" class="strategy-note">
+          公开面板仅核验同一安全区块上的钱包、NFT、区间、本金与 feeGrowth；不会读取私钥、待签交易或 Keeper 运行目录。
+        </p>
       </section>
 
       <section class="trend-model-section reveal" aria-labelledby="trend-model-title">
@@ -387,6 +441,6 @@
     </main>
 
     <div id="chart-tooltip" class="chart-tooltip" hidden></div>
-    <script type="module" src="/app.js?v=trendinventory0908"></script>
+    <script type="module" src="/app.js?v=strategyinventory0908"></script>
   </body>
 </html>

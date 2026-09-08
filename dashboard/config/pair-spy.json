@@ -133,6 +133,16 @@
     "manifest": "lp-portfolio-ledger.json",
     "inventoryLogChunk": 50000
   },
+  "externalStrategies": [
+    {
+      "id": "pair-usdg-martingale-live-1",
+      "label": "PAIR / USDG 有限马丁实盘",
+      "wallet": "0x014E58cF3568641684a8278B50003F19fC87218B",
+      "poolId": "0x97f48c8d9639b7940874b6c6a43b3d606d070a694920b545acff9c35926593a6",
+      "scanFromBlock": "57687840",
+      "expectedActivePositions": 5
+    }
+  ],
   "positions": [
     {
       "label": "高位覆盖",

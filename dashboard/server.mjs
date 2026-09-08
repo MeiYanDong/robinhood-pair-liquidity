@@ -173,6 +173,14 @@ function publicRuntime() {
     hasSucceededSinceStart: runtime.hasSucceededSinceStart,
   })
   const inventoryReady = runtime.snapshot?.inventory?.status === 'VERIFIED'
+  const strategyStatuses = (runtime.snapshot?.strategies || []).map((strategy) => strategy.status)
+  const strategyStatus = !runtime.snapshot
+    ? 'INITIALIZING'
+    : strategyStatuses.length === 0
+      ? 'DISABLED'
+      : strategyStatuses.every((status) => status === 'VERIFIED')
+        ? 'VERIFIED'
+        : 'PARTIAL'
   const ready = evaluated.ready && inventoryReady
   return {
     service: runtime.service,
@@ -192,6 +200,7 @@ function publicRuntime() {
     subsystems: {
       market: runtime.snapshot ? (evaluated.ready ? 'LIVE' : evaluated.status) : 'INITIALIZING',
       inventory: runtime.snapshot?.inventory?.status || 'INITIALIZING',
+      strategies: strategyStatus,
       trend: runtime.snapshot?.trendModel?.evidenceLevel || 'INITIALIZING',
       publisher: runtime.hasSucceededSinceStart ? 'LIVE' : 'INITIALIZING',
     },
@@ -262,6 +271,14 @@ const server = http.createServer((request, response) => {
                     accountingBoundary: runtime.snapshot.portfolio.accountingBoundary,
                   }
                 : null,
+              strategies: (runtime.snapshot.strategies || []).map((strategy) => ({
+                id: strategy.id,
+                label: strategy.label,
+                wallet: strategy.wallet,
+                poolId: strategy.pool?.poolId || null,
+                scanFromBlock: strategy.scanFromBlock,
+                evidence: strategy.evidence,
+              })),
               caveats: runtime.snapshot.caveats,
             }
           : null,
@@ -287,6 +304,20 @@ const server = http.createServer((request, response) => {
       sendJson(response, runtime.snapshot.inventory.status === 'VERIFIED' ? 200 : 206, {
         runtime: publicRuntime(),
         inventory: runtime.snapshot.inventory,
+      })
+      return
+    }
+    if (url.pathname === '/api/strategies') {
+      if (!runtime.snapshot?.strategies) {
+        sendJson(response, 503, { status: 'STRATEGIES_UNAVAILABLE', runtime: publicRuntime() }, { 'retry-after': '5' })
+        return
+      }
+      const complete = runtime.snapshot.strategies.every((strategy) => strategy.status === 'VERIFIED')
+      sendJson(response, complete ? 200 : 206, {
+        runtime: publicRuntime(),
+        snapshotId: runtime.snapshot.snapshotId,
+        generatedAt: runtime.snapshot.generatedAt,
+        strategies: runtime.snapshot.strategies,
       })
       return
     }

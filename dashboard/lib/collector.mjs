@@ -246,6 +246,40 @@ export function currentDirectPositionConfigs(pool, manifest = null) {
     }))
 }
 
+export function normalizeExternalStrategies(config) {
+  const pools = new Map(
+    (config.comparison?.pools || []).map((pool) => [String(pool.poolId || '').toLowerCase(), { ...pool }]),
+  )
+  const seen = new Set()
+  return (config.externalStrategies || [])
+    .filter((strategy) => strategy?.enabled !== false)
+    .map((strategy) => {
+      const id = String(strategy.id || '')
+      if (!/^[a-z0-9][a-z0-9_-]{0,63}$/u.test(id)) {
+        throw new Error(`externalStrategies.id is invalid: ${id || '<empty>'}`)
+      }
+      if (seen.has(id)) throw new Error(`externalStrategies.id is duplicated: ${id}`)
+      seen.add(id)
+      const poolId = String(strategy.poolId || '').toLowerCase()
+      const pool = pools.get(poolId)
+      if (!pool) throw new Error(`external strategy ${id} references an unknown comparison pool`)
+      const scanFromBlock = BigInt(strategy.scanFromBlock)
+      if (scanFromBlock <= 0n) throw new Error(`external strategy ${id} scanFromBlock must be positive`)
+      const expectedActivePositions = Number(strategy.expectedActivePositions)
+      if (!Number.isSafeInteger(expectedActivePositions) || expectedActivePositions < 0) {
+        throw new Error(`external strategy ${id} expectedActivePositions must be a non-negative integer`)
+      }
+      return {
+        id,
+        label: String(strategy.label || id),
+        wallet: getAddress(strategy.wallet),
+        scanFromBlock,
+        expectedActivePositions,
+        pool,
+      }
+    })
+}
+
 export function v3HumanPriceFromSqrt(sqrtPriceX96, token0Decimals = 18, token1Decimals = 6) {
   const rawToken1PerToken0 = Math.pow(Number(sqrtPriceX96) / Q96_NUMBER, 2)
   return rawToken1PerToken0 * Math.pow(10, token0Decimals - token1Decimals)
@@ -555,6 +589,34 @@ function mapWithConcurrency(values, concurrency, fn) {
     }
   }
   return Promise.all(Array.from({ length: Math.min(concurrency, values.length) }, worker)).then(() => result)
+}
+
+class InventoryStore {
+  constructor(filePath, identity) {
+    fs.mkdirSync(path.dirname(filePath), { recursive: true })
+    this.db = new DatabaseSync(filePath)
+    this.db.exec(`
+      PRAGMA journal_mode = WAL;
+      PRAGMA synchronous = NORMAL;
+      PRAGMA busy_timeout = 5000;
+      CREATE TABLE IF NOT EXISTS meta (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      );
+    `)
+    const storedIdentity = this.db.prepare('SELECT value FROM meta WHERE key = ?').get('identity')?.value ?? null
+    if (storedIdentity && storedIdentity !== identity) {
+      this.db.close()
+      throw new Error('策略仓位数据库身份与当前 chain/wallet/pool 不一致；请使用新的数据库路径')
+    }
+    if (!storedIdentity) {
+      this.db.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').run('identity', identity)
+    }
+  }
+
+  close() {
+    this.db.close()
+  }
 }
 
 class Store {
@@ -1166,6 +1228,26 @@ export class PairDashboardCollector {
     this.identity = `${this.config.chain.id}:${this.poolId}:${this.anchorBlock}`
     this.store = new Store(databasePath, this.identity)
     this.positionInventory = new PositionInventoryRepository(this.store.db)
+    this.externalStrategyTrackers = normalizeExternalStrategies(this.config).map((strategy) => {
+      const filePath = path.join(path.dirname(databasePath), `strategy-inventory-${strategy.id}.sqlite`)
+      const identity = [
+        this.config.chain.id,
+        'external-strategy',
+        strategy.id,
+        strategy.wallet.toLowerCase(),
+        strategy.pool.poolId.toLowerCase(),
+        strategy.scanFromBlock,
+      ].join(':')
+      const store = new InventoryStore(filePath, identity)
+      return {
+        ...strategy,
+        store,
+        positionInventory: new PositionInventoryRepository(store.db),
+        positionInventorySnapshot: null,
+        lastError: null,
+        lastSuccessBlock: null,
+      }
+    })
     const manifestName = this.config.portfolio?.manifest || 'lp-portfolio-ledger.json'
     this.portfolioManifestPath = path.resolve(path.dirname(configPath), manifestName)
     this.basePortfolioManifest = loadPortfolioManifest(this.portfolioManifestPath)
@@ -1265,7 +1347,7 @@ export class PairDashboardCollector {
     }
   }
 
-  async readInventoryPosition(tokenId, blockNumber, registry) {
+  async readInventoryPosition(tokenId, blockNumber, registry = this.positionPoolRegistry(), wallet = this.wallet) {
     try {
       const [owner, liquidity, [poolKey, info]] = await Promise.all([
         this.client.readContract({
@@ -1290,7 +1372,7 @@ export class PairDashboardCollector {
           blockNumber,
         }),
       ])
-      return decodePositionInfo({ tokenId, owner, liquidity, poolKey, info, registry, wallet: this.wallet })
+      return decodePositionInfo({ tokenId, owner, liquidity, poolKey, info, registry, wallet })
     } catch (error) {
       return {
         tokenId: String(tokenId),
@@ -1305,6 +1387,53 @@ export class PairDashboardCollector {
         dataQuality: `read_failed:${safePublicError(error)}`,
       }
     }
+  }
+
+  async reconcilePositionInventory({ positionInventory, wallet, safeBlock, registry }) {
+    const ownedTokenIds = positionInventory.ownedTokenIds(wallet)
+    const [expectedBalance, ownedStates] = await Promise.all([
+      this.client.readContract({
+        address: this.positionManager,
+        abi: POSITION_MANAGER_ABI,
+        functionName: 'balanceOf',
+        args: [wallet],
+        blockNumber: safeBlock.number,
+      }),
+      mapWithConcurrency(ownedTokenIds, Math.max(1, Math.floor(this.rpcMethodConcurrency / 3)), (tokenId) =>
+        this.readInventoryPosition(tokenId, safeBlock.number, registry, wallet),
+      ),
+    ])
+    const ownedSet = new Set(ownedTokenIds)
+    const previousById = new Map([
+      ...positionInventory
+        .seeds()
+        .filter((seed) => seed.state)
+        .map((seed) => [String(seed.tokenId), seed.state]),
+      ...positionInventory.states().map((state) => [String(state.tokenId), state]),
+    ])
+    const allKnownIds = new Set([
+      ...previousById.keys(),
+      ...positionInventory.transfers().map((transfer) => String(transfer.tokenId)),
+    ])
+    const nonOwnedStates = [...allKnownIds]
+      .filter((tokenId) => !ownedSet.has(tokenId))
+      .map((tokenId) => {
+        const previous = previousById.get(tokenId) || {}
+        return {
+          ...previous,
+          tokenId,
+          owner: null,
+          liquidity: previous.liquidity ?? previous.lastKnownLiquidity ?? null,
+          status: 'owner_mismatch',
+          dataQuality: 'ownership_derived_from_canonical_transfer_events',
+        }
+      })
+    const audit = {
+      ...inventoryAudit({ expectedBalance, ownedTokenIds, states: ownedStates, safeBlock }),
+      cursorBlock: positionInventory.cursor().toString(),
+      cursorHash: positionInventory.cursorHash(),
+    }
+    return { states: [...ownedStates, ...nonOwnedStates], audit }
   }
 
   async syncPositionInventory(safeBlock) {
@@ -1337,54 +1466,16 @@ export class PairDashboardCollector {
       cursor = toBlock
     }
 
-    const ownedTokenIds = this.positionInventory.ownedTokenIds(this.wallet)
-    const [expectedBalance, ownedStates] = await Promise.all([
-      this.client.readContract({
-        address: this.positionManager,
-        abi: POSITION_MANAGER_ABI,
-        functionName: 'balanceOf',
-        args: [this.wallet],
-        blockNumber: safeBlock.number,
-      }),
-      mapWithConcurrency(ownedTokenIds, Math.max(1, Math.floor(this.rpcMethodConcurrency / 3)), (tokenId) =>
-        this.readInventoryPosition(tokenId, safeBlock.number, this.positionPoolRegistry()),
-      ),
-    ])
-    const ownedSet = new Set(ownedTokenIds)
-    const previousById = new Map([
-      ...this.positionInventory
-        .seeds()
-        .filter((seed) => seed.state)
-        .map((seed) => [String(seed.tokenId), seed.state]),
-      ...this.positionInventory.states().map((state) => [String(state.tokenId), state]),
-    ])
-    const allKnownIds = new Set([
-      ...previousById.keys(),
-      ...this.positionInventory.transfers().map((transfer) => String(transfer.tokenId)),
-    ])
-    const nonOwnedStates = [...allKnownIds]
-      .filter((tokenId) => !ownedSet.has(tokenId))
-      .map((tokenId) => {
-        const previous = previousById.get(tokenId) || {}
-        return {
-          ...previous,
-          tokenId,
-          owner: null,
-          liquidity: previous.liquidity ?? previous.lastKnownLiquidity ?? null,
-          status: 'owner_mismatch',
-          dataQuality: 'ownership_derived_from_canonical_transfer_events',
-        }
-      })
-    const audit = {
-      ...inventoryAudit({ expectedBalance, ownedTokenIds, states: ownedStates, safeBlock }),
-      cursorBlock: this.positionInventory.cursor().toString(),
-      cursorHash: this.positionInventory.cursorHash(),
-    }
+    const { states, audit } = await this.reconcilePositionInventory({
+      positionInventory: this.positionInventory,
+      wallet: this.wallet,
+      safeBlock,
+      registry: this.positionPoolRegistry(),
+    })
     if (!audit.balanceMatches && this.positionInventory.getMeta('mode') !== 'full_scan') {
       await this.resetPositionInventoryToFullScan('balanceOf 与增量事件推导数量不一致')
       return this.syncPositionInventory(safeBlock)
     }
-    const states = [...ownedStates, ...nonOwnedStates]
     this.positionInventory.saveStates({ states, safeBlock, audit })
     this.portfolioManifest = mergeRuntimePortfolioManifest({
       manifest: this.basePortfolioManifest,
@@ -1399,6 +1490,133 @@ export class PairDashboardCollector {
     }))
     this.positionInventorySnapshot = { states, audit }
     return this.positionInventorySnapshot
+  }
+
+  resetExternalStrategyInventory(tracker, reason) {
+    this.onProgress({
+      phase: 'external-strategy-inventory-rebuild',
+      strategyId: tracker.id,
+      message: `${tracker.label} 仓位游标重建：${reason}；从区块 ${tracker.scanFromBlock} 重新扫描`,
+    })
+    tracker.positionInventory.initializeFullScan({
+      scanFromBlock: tracker.scanFromBlock,
+      wallet: tracker.wallet,
+      positionManager: this.positionManager,
+    })
+  }
+
+  async ensureExternalStrategyInventoryInitialized(tracker, safeBlock) {
+    const inventory = tracker.positionInventory
+    if (inventory.initialized()) {
+      const storedWallet = inventory.getMeta('wallet')
+      const storedPositionManager = inventory.getMeta('position_manager')
+      if (
+        storedWallet !== tracker.wallet.toLowerCase() ||
+        storedPositionManager !== this.positionManager.toLowerCase()
+      ) {
+        this.resetExternalStrategyInventory(tracker, '钱包或 PositionManager 身份发生变化')
+      }
+    } else {
+      this.resetExternalStrategyInventory(tracker, '首次启动')
+    }
+
+    const cursor = inventory.cursor()
+    if (cursor > safeBlock.number) {
+      this.resetExternalStrategyInventory(tracker, '持久化游标高于当前安全区块')
+      return
+    }
+    const cursorHash = inventory.cursorHash()
+    if (cursor >= tracker.scanFromBlock && cursorHash) {
+      const chainCursor = await this.getBlock({ blockNumber: cursor })
+      if (chainCursor.hash.toLowerCase() !== cursorHash.toLowerCase()) {
+        this.resetExternalStrategyInventory(tracker, '检测到仓位事件游标重组')
+      }
+    }
+  }
+
+  async syncExternalStrategyInventory(tracker, safeBlock, allowMismatchRebuild = true) {
+    await this.ensureExternalStrategyInventoryInitialized(tracker, safeBlock)
+    const configuredChunk = Number(this.config.portfolio?.inventoryLogChunk || 50_000)
+    const logChunk = BigInt(Math.max(1_000, Math.trunc(configuredChunk)))
+    let cursor = tracker.positionInventory.cursor()
+    while (cursor < safeBlock.number) {
+      const fromBlock = cursor + 1n
+      const toBlock = fromBlock + logChunk - 1n < safeBlock.number ? fromBlock + logChunk - 1n : safeBlock.number
+      this.onProgress({
+        phase: 'external-strategy-inventory-sync',
+        strategyId: tracker.id,
+        message: `${tracker.label} 扫描 PositionManager NFT ${fromBlock}–${toBlock}`,
+      })
+      const [incoming, outgoing] = await Promise.all([
+        this.getLogs(this.positionManager, POSITION_TRANSFER_EVENT, fromBlock, toBlock, { to: tracker.wallet }),
+        this.getLogs(this.positionManager, POSITION_TRANSFER_EVENT, fromBlock, toBlock, { from: tracker.wallet }),
+      ])
+      const unique = new Map()
+      for (const log of [...incoming, ...outgoing]) unique.set(`${log.transactionHash}:${log.logIndex}`, log)
+      const logs = [...unique.values()].sort(
+        (left, right) =>
+          Number(left.blockNumber - right.blockNumber) ||
+          Number(left.transactionIndex - right.transactionIndex) ||
+          Number(left.logIndex - right.logIndex),
+      )
+      const endBlock = toBlock === safeBlock.number ? safeBlock : await this.getBlock({ blockNumber: toBlock })
+      tracker.positionInventory.commitTransfers({ logs, cursorBlock: toBlock, cursorHash: endBlock.hash })
+      cursor = toBlock
+    }
+
+    const result = await this.reconcilePositionInventory({
+      positionInventory: tracker.positionInventory,
+      wallet: tracker.wallet,
+      safeBlock,
+      registry: this.positionPoolRegistry(),
+    })
+    if (!result.audit.balanceMatches && allowMismatchRebuild) {
+      this.resetExternalStrategyInventory(tracker, 'balanceOf 与增量事件推导数量不一致')
+      return this.syncExternalStrategyInventory(tracker, safeBlock, false)
+    }
+    tracker.positionInventory.saveStates({ states: result.states, safeBlock, audit: result.audit })
+    tracker.positionInventorySnapshot = result
+    tracker.lastError = null
+    tracker.lastSuccessBlock = safeBlock.number.toString()
+    return result
+  }
+
+  async syncExternalStrategyInventories(safeBlock) {
+    for (const tracker of this.externalStrategyTrackers) {
+      try {
+        await this.syncExternalStrategyInventory(tracker, safeBlock)
+      } catch (error) {
+        tracker.lastError = safePublicError(error)
+        let audit = {
+          status: 'UNKNOWN',
+          inventoryStatus: 'external_strategy_inventory_not_available',
+        }
+        let states = []
+        try {
+          const previousAudit = tracker.positionInventory.getMeta('audit')
+          if (previousAudit) {
+            audit = JSON.parse(previousAudit)
+          }
+          states = tracker.positionInventory.states()
+        } catch {
+          // A malformed or unavailable cache is not trusted. Current chain reads continue without this strategy.
+        }
+        tracker.positionInventorySnapshot = {
+          states,
+          audit: {
+            ...audit,
+            status: 'PARTIAL',
+            inventoryStatus: 'external_strategy_refresh_failed',
+            refreshError: tracker.lastError,
+          },
+        }
+        this.onProgress({
+          phase: 'external-strategy-degraded',
+          strategyId: tracker.id,
+          message: `${tracker.label} 读取失败；保留上次清单并继续主面板刷新`,
+        })
+      }
+    }
   }
 
   async getLogs(address, event, fromBlock, toBlock, args) {
@@ -1670,7 +1888,7 @@ export class PairDashboardCollector {
     }
   }
 
-  async readDirectPosition(pool, position, state, blockNumber, inventoryState = null) {
+  async readDirectPosition(pool, position, state, blockNumber, inventoryState = null, ownerWallet = this.wallet) {
     const tokenId = BigInt(position.tokenId)
     const [slot0] = state
     const currentTick = Number(slot0[1])
@@ -1711,7 +1929,7 @@ export class PairDashboardCollector {
         }),
       this.getAccruedFeesForPool(pool.poolId, position, blockNumber),
     ])
-    const owned = owner.toLowerCase() === this.wallet.toLowerCase()
+    const owned = owner.toLowerCase() === ownerWallet.toLowerCase()
     const active = owned && managerLiquidity > 0n
     const principal = active
       ? positionTokenAmounts(managerLiquidity, slot0[0], position.tickLower, position.tickUpper)
@@ -1860,6 +2078,254 @@ export class PairDashboardCollector {
       one: 0,
       ...Object.fromEntries(tokenBalances),
     }
+  }
+
+  async readExternalStrategyWalletBalances(wallet, blockNumber) {
+    const [ethWei, usdgRaw, pairRaw] = await Promise.all([
+      this.client.getBalance({ address: wallet, blockNumber }),
+      this.client.readContract({
+        address: this.usdg,
+        abi: ERC20_BALANCE_ABI,
+        functionName: 'balanceOf',
+        args: [wallet],
+        blockNumber,
+      }),
+      this.client.readContract({
+        address: getAddress(this.config.tokens.pair.address),
+        abi: ERC20_BALANCE_ABI,
+        functionName: 'balanceOf',
+        args: [wallet],
+        blockNumber,
+      }),
+    ])
+    return {
+      eth: amount(ethWei),
+      usdg: amount(usdgRaw, this.config.tokens.usdg.decimals),
+      pair: amount(pairRaw, this.config.tokens.pair.decimals),
+    }
+  }
+
+  async buildExternalStrategySnapshots({ safeBlock, comparisonStates, ethQuote }) {
+    return Promise.all(
+      this.externalStrategyTrackers.map(async (tracker) => {
+        try {
+          const poolIndex = this.comparisonPools.findIndex(
+            (pool) => pool.poolId.toLowerCase() === tracker.pool.poolId.toLowerCase(),
+          )
+          const inventoryStates = tracker.positionInventorySnapshot?.states || []
+          const inventoryAuditResult = tracker.positionInventorySnapshot?.audit || {
+            status: 'UNKNOWN',
+            inventoryStatus: 'position_inventory_not_available',
+          }
+          if (poolIndex < 0 || !comparisonStates[poolIndex]) {
+            return {
+              schemaVersion: 1,
+              id: tracker.id,
+              label: tracker.label,
+              wallet: tracker.wallet,
+              status: 'PARTIAL',
+              warnings: ['POOL_STATE_UNAVAILABLE'],
+              inventory: inventoryAuditResult,
+              positions: [],
+            }
+          }
+
+          const poolState = comparisonStates[poolIndex]
+          const [slot0, marketLiquidity] = poolState
+          const currentTick = Number(slot0[1])
+          const pairUsdg = directPairPriceAtTick(
+            currentTick,
+            this.config.tokens.usdg.decimals,
+            this.config.tokens.pair.decimals,
+          )
+          const allCurrentlyOwned = inventoryStates.filter((position) => ['active', 'empty'].includes(position.status))
+          const currentlyOwned = allCurrentlyOwned.filter(
+            (position) => String(position.poolId || '').toLowerCase() === tracker.pool.poolId.toLowerCase(),
+          )
+          const firstTransfers = tracker.positionInventory.firstTransfers()
+          const detailed = await mapWithConcurrency(currentlyOwned, 4, async (position) => {
+            const result = await this.readDirectPosition(
+              tracker.pool,
+              {
+                tokenId: String(position.tokenId),
+                label: `NFT #${position.tokenId}`,
+                role: 'finite-martingale-band',
+                tickLower: Number(position.tickLower),
+                tickUpper: Number(position.tickUpper),
+              },
+              poolState,
+              safeBlock.number,
+              position,
+              tracker.wallet,
+            )
+            const firstTransfer = firstTransfers.get(String(position.tokenId))
+            return {
+              ...result,
+              discoveredAtBlock: firstTransfer ? String(firstTransfer.blockNumber) : null,
+              discoveredBy: 'PositionManager Transfer auto-discovery',
+            }
+          })
+          detailed.sort((left, right) => right.priceHighUsdg - left.priceHighUsdg)
+          const positions = detailed.map((position, index) => ({ ...position, bandLabel: `B${index + 1}` }))
+          const walletBalances = await this.readExternalStrategyWalletBalances(tracker.wallet, safeBlock.number)
+          const totals = positions.reduce(
+            (result, position) => ({
+              principalUsdg: result.principalUsdg + Number(position.principal?.usdg || 0),
+              principalUsdgToken: result.principalUsdgToken + Number(position.principal?.usdgToken || 0),
+              principalPair: result.principalPair + Number(position.principal?.pair || 0),
+              accruedFeesUsdg: result.accruedFeesUsdg + Number(position.accruedFees?.usdg || 0),
+              accruedFeeUsdgToken: result.accruedFeeUsdgToken + Number(position.accruedFees?.usdgToken || 0),
+              accruedFeePair: result.accruedFeePair + Number(position.accruedFees?.pair || 0),
+            }),
+            {
+              principalUsdg: 0,
+              principalUsdgToken: 0,
+              principalPair: 0,
+              accruedFeesUsdg: 0,
+              accruedFeeUsdgToken: 0,
+              accruedFeePair: 0,
+            },
+          )
+          const activeCount = positions.filter((position) => position.status === 'active').length
+          const inRangeCount = positions.filter((position) => position.status === 'active' && position.inRange).length
+          const wrongPoolCount = allCurrentlyOwned.filter(
+            (position) => String(position.poolId || '').toLowerCase() !== tracker.pool.poolId.toLowerCase(),
+          ).length
+          const warnings = [
+            ...(inventoryAuditResult.balanceMatches === false ? ['BALANCE_MISMATCH'] : []),
+            ...((inventoryAuditResult.failedTokenIds || []).length ? ['POSITION_READ_FAILURE'] : []),
+            ...(activeCount !== tracker.expectedActivePositions ? ['ACTIVE_POSITION_COUNT_OUTSIDE_POLICY'] : []),
+            ...(wrongPoolCount ? ['UNEXPECTED_POOL_POSITION'] : []),
+            ...(positions.some((position) => position.dataQuality !== 'verified') ? ['POSITION_VALUE_PARTIAL'] : []),
+            ...(tracker.lastError ? ['EXTERNAL_INVENTORY_REFRESH_FAILED'] : []),
+          ]
+          const status = inventoryAuditResult.status === 'VERIFIED' && warnings.length === 0 ? 'VERIFIED' : 'PARTIAL'
+          const idleUsdgValue = walletBalances.usdg + walletBalances.pair * pairUsdg
+          const ethUsdg = ethQuote?.status === 'verified_quote' ? ethQuote.ethUsdg : null
+          return {
+            schemaVersion: 1,
+            id: tracker.id,
+            label: tracker.label,
+            strategyType: 'FINITE_MARTINGALE',
+            declaredMode: 'LIVE_EXTERNAL_KEEPER',
+            declaredModeEvidence: 'CONFIGURED',
+            wallet: tracker.wallet,
+            status,
+            warnings,
+            asOfBlock: safeBlock.number.toString(),
+            asOfBlockHash: safeBlock.hash,
+            inventoryLastSuccessBlock: tracker.lastSuccessBlock,
+            scanFromBlock: tracker.scanFromBlock.toString(),
+            expectedActivePositions: tracker.expectedActivePositions,
+            pool: {
+              id: tracker.pool.id,
+              label: `${tracker.pool.label} ${tracker.pool.feeLabel}`,
+              poolId: tracker.pool.poolId,
+              feePips: tracker.pool.feePips,
+              currentTick,
+              pairUsdg,
+              currentActiveLiquidity: marketLiquidity.toString(),
+            },
+            lifecycleSummary: {
+              discovered: inventoryStates.length,
+              active: activeCount,
+              inRange: inRangeCount,
+              empty: inventoryStates.filter((position) => position.status === 'empty').length,
+              ownerMismatch: inventoryStates.filter((position) => position.status === 'owner_mismatch').length,
+              readFailed: inventoryStates.filter((position) => position.status === 'read_failed').length,
+            },
+            totals: {
+              ...totals,
+              walletBalances,
+              idleUsdgValue,
+              markedStrategyAssetsUsdg: totals.principalUsdg + totals.accruedFeesUsdg + idleUsdgValue,
+              gasReserveUsdg: ethUsdg == null ? null : walletBalances.eth * ethUsdg,
+            },
+            positions,
+            inventory: {
+              status: inventoryAuditResult.status,
+              inventoryStatus: inventoryAuditResult.inventoryStatus,
+              expectedBalance: inventoryAuditResult.expectedBalance ?? null,
+              indexedOwnedCount: inventoryAuditResult.inferredOwnedNfts ?? null,
+              verifiedOwnedCount: inventoryAuditResult.verifiedOwnedNfts ?? null,
+              balanceMatches: inventoryAuditResult.balanceMatches ?? false,
+              cursorBlock: inventoryAuditResult.cursorBlock || null,
+              cursorHash: inventoryAuditResult.cursorHash || null,
+              method: inventoryAuditResult.method || null,
+              positions: inventoryStates,
+            },
+            evidence: {
+              onChainState: inventoryAuditResult.status,
+              valuation: 'same-safe-block-derived',
+              costBasis: 'UNKNOWN_NOT_IN_PUBLIC_LEDGER',
+              keeperRuntime: 'NOT_OBSERVED_BY_DASHBOARD',
+              refreshError: tracker.lastError,
+              note: 'Public dashboard verifies chain state only; it does not read signer state, pending signed intents, or credentials.',
+            },
+          }
+        } catch (error) {
+          const message = safePublicError(error)
+          return {
+            schemaVersion: 1,
+            id: tracker.id,
+            label: tracker.label,
+            strategyType: 'FINITE_MARTINGALE',
+            declaredMode: 'LIVE_EXTERNAL_KEEPER',
+            declaredModeEvidence: 'CONFIGURED',
+            wallet: tracker.wallet,
+            status: 'PARTIAL',
+            warnings: ['STRATEGY_SNAPSHOT_BUILD_FAILED'],
+            asOfBlock: safeBlock.number.toString(),
+            asOfBlockHash: safeBlock.hash,
+            inventoryLastSuccessBlock: tracker.lastSuccessBlock,
+            scanFromBlock: tracker.scanFromBlock.toString(),
+            expectedActivePositions: tracker.expectedActivePositions,
+            pool: {
+              id: tracker.pool.id,
+              label: `${tracker.pool.label} ${tracker.pool.feeLabel}`,
+              poolId: tracker.pool.poolId,
+              feePips: tracker.pool.feePips,
+              currentTick: null,
+              pairUsdg: null,
+              currentActiveLiquidity: null,
+            },
+            lifecycleSummary: {
+              discovered: tracker.positionInventorySnapshot?.states?.length || 0,
+              active: 0,
+              inRange: 0,
+              empty: 0,
+              ownerMismatch: 0,
+              readFailed: 0,
+            },
+            totals: {
+              principalUsdg: null,
+              principalUsdgToken: null,
+              principalPair: null,
+              accruedFeesUsdg: null,
+              accruedFeeUsdgToken: null,
+              accruedFeePair: null,
+              walletBalances: null,
+              idleUsdgValue: null,
+              markedStrategyAssetsUsdg: null,
+              gasReserveUsdg: null,
+            },
+            positions: [],
+            inventory: tracker.positionInventorySnapshot?.audit || {
+              status: 'UNKNOWN',
+              inventoryStatus: 'strategy_snapshot_build_failed',
+            },
+            evidence: {
+              onChainState: 'PARTIAL',
+              valuation: 'UNKNOWN',
+              costBasis: 'UNKNOWN_NOT_IN_PUBLIC_LEDGER',
+              keeperRuntime: 'NOT_OBSERVED_BY_DASHBOARD',
+              refreshError: message,
+              note: 'The external strategy snapshot failed independently; the main dashboard remains available.',
+            },
+          }
+        }
+      }),
+    )
   }
 
   async readOneUsdg(blockNumber) {
@@ -2655,6 +3121,7 @@ export class PairDashboardCollector {
       pairSwaps,
       marks,
     })
+    const strategies = await this.buildExternalStrategySnapshots({ safeBlock, comparisonStates, ethQuote })
     const snapshotId = `${this.config.chain.id}:${safeBlock.number}:${safeBlock.hash}`
     const generatedAt = new Date().toISOString()
     trendModel.snapshotId = snapshotId
@@ -2704,7 +3171,7 @@ export class PairDashboardCollector {
     }
 
     return {
-      schemaVersion: 4,
+      schemaVersion: 5,
       snapshotId,
       generatedAt,
       status: 'LIVE',
@@ -2747,6 +3214,7 @@ export class PairDashboardCollector {
       directPositions,
       inventory,
       portfolio,
+      strategies,
       focusBandUsdg: this.config.focusBandUsdg,
       windows,
       trendModel,
@@ -2764,6 +3232,7 @@ export class PairDashboardCollector {
         historyCoverage: 'from configured anchor block',
         grossFeeMeaning: 'pool-wide estimate, not wallet attribution',
         accruedFeeMeaning: 'wallet-position feeGrowth readback at the displayed block, before gas',
+        externalStrategies: Object.fromEntries(strategies.map((strategy) => [strategy.id, strategy.status])),
       },
       caveats: [
         'Every market and position read is pinned to the displayed safe block.',
@@ -2772,6 +3241,7 @@ export class PairDashboardCollector {
         'Accrued position fees are separate from pool-wide heatmap estimates.',
         'Cross-pool comparison applies current liquidity to historical flow; it is a static opportunity estimate, not realized APR.',
         'PAIR/USDG candidates change inventory exposure from SPY to USDG and are not economically identical to SPY/PAIR.',
+        'External strategy accounts are valued from public same-safe-block chain state; private keeper runtime and cost basis are intentionally not connected.',
       ],
     }
   }
@@ -2782,6 +3252,7 @@ export class PairDashboardCollector {
     const safeNumber = head.number > this.confirmations ? head.number - this.confirmations : head.number
     const safeBlock = await this.getBlock({ blockNumber: safeNumber })
     await this.syncPositionInventory(safeBlock)
+    await this.syncExternalStrategyInventories(safeBlock)
     await this.syncTo(safeBlock.number)
     for (const pool of this.comparisonPools) await this.syncComparisonPoolTo(pool, safeBlock.number)
     this.onProgress({ phase: 'build', message: `构建安全区块 ${safeBlock.number} 快照` })
@@ -2789,6 +3260,7 @@ export class PairDashboardCollector {
   }
 
   close() {
+    for (const tracker of this.externalStrategyTrackers) tracker.store.close()
     this.store.close()
   }
 }
