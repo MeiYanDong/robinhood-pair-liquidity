@@ -34,6 +34,7 @@ const BLOCK_BATCH = 20
 const BLOCK_FETCH_ATTEMPTS = 9
 const BLOCK_BATCH_PAUSE_MS = 600
 const RPC_READ_ATTEMPTS = 6
+const EXTERNAL_STRATEGY_SYNC_ATTEMPTS = 2
 const SYNC_CHUNK_PAUSE_MS = 250
 const MULTICALL3_ADDRESS = getAddress('0xcA11bde05977b3631167028862bE2a173976CA11')
 
@@ -1584,7 +1585,22 @@ export class PairDashboardCollector {
   async syncExternalStrategyInventories(safeBlock) {
     for (const tracker of this.externalStrategyTrackers) {
       try {
-        await this.syncExternalStrategyInventory(tracker, safeBlock)
+        for (let attempt = 0; attempt < EXTERNAL_STRATEGY_SYNC_ATTEMPTS; attempt += 1) {
+          try {
+            await this.syncExternalStrategyInventory(tracker, safeBlock)
+            break
+          } catch (error) {
+            if (attempt === EXTERNAL_STRATEGY_SYNC_ATTEMPTS - 1) throw error
+            this.onProgress({
+              phase: 'external-strategy-retry',
+              strategyId: tracker.id,
+              message: `${tracker.label} 增量对账暂时失败，正在独立重试`,
+              attempt: attempt + 1,
+              attempts: EXTERNAL_STRATEGY_SYNC_ATTEMPTS,
+            })
+            await new Promise((resolve) => setTimeout(resolve, 750 * (attempt + 1)))
+          }
+        }
       } catch (error) {
         tracker.lastError = safePublicError(error)
         let audit = {
