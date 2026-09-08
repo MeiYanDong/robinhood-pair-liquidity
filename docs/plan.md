@@ -196,30 +196,30 @@ Dashboard 自动重算并发布，浏览器按 snapshotId 更新
 
 ### 4.3 已落地 / 未落地审计
 
-| 能力                          | 当前状态                                       | 证据                                                                                                                | 缺口                                                                 |
-| ----------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
-| 后端定时刷新市场快照          | 旧版 `PROD_VERIFIED`；新版 `LOCAL_IMPLEMENTED` | `dashboard/server.mjs` 每 60 秒刷新；本地新版把市场、动态 inventory 与趋势模型发布为同一 snapshotId                 | 新版尚待生产发布与连续刷新 readback                                  |
-| 前端自动轮询                  | `LOCAL_IMPLEMENTED` 且线上页面可用             | `dashboard/public/app.js` 每 5 秒请求快照                                                                           | 后端仍每 60 秒才产生新快照；没有流式更新                             |
-| systemd 常驻与重启            | `PROD_VERIFIED`                                | `dashboard/deploy/pair-liquidity-dashboard.service`；线上 startedAt/health                                          | 只托管面板采集器，没有趋势 Shadow 服务                               |
-| 自动发现钱包全部 NFT          | `LOCAL_IMPLEMENTED`                            | `dashboard/lib/position-inventory.mjs` 增量索引 Transfer，并以同一 safe block 的 `balanceOf/ownerOf/liquidity` 核对 | 尚待生产部署与新增/撤走 NFT 的生产 readback                          |
-| 自动更新 NFT 生命周期账本     | `LOCAL_IMPLEMENTED`                            | SQLite 保存事件游标、区块哈希、逐仓快照与历史状态；刷新时动态合并 manifest                                          | 自动发现仓位的资金来源先保持 `UNKNOWN_EXTERNAL_ORIGIN`，不可伪造成本 |
-| 1h/6h 成交量和方向流          | `LOCAL_IMPLEMENTED`                            | `lib/trend-lp-signals.mjs`                                                                                          | 仍依赖面板已有 bins 和当前 mark 近似估值                             |
-| 成交量 + 流动性 + 份额选区间  | `LOCAL_IMPLEMENTED`                            | `dashboard/lib/trend-model.mjs` 以 1h/6h P10/P90 直接生成热区锚点，并评分热区覆盖、模拟份额、流动性稀释与宽度偏差   | LVR、波动率和滚仓摩擦项待补                                          |
-| `$0.01` 左右目标宽度          | `LOCAL_IMPLEMENTED`                            | 价格域候选以 `$0.010000` 为中心偏好，默认尝试约 `$0.008/$0.010/$0.012/$0.015` 并向外 Tick 对齐                      | 仍需更多极端价格和 SPY/USDG 漂移回放                                 |
-| 38 个趋势场景回放             | `LOCAL_IMPLEMENTED`                            | `npm run trend:scenarios`、fixture                                                                                  | 需要新增宽区间、锚价变化和连续突破场景                               |
-| 跨区间、插针过滤、跳档状态    | `LOCAL_IMPLEMENTED`                            | `lib/trend-lp-sequence.mjs`                                                                                         | 尚未作为 7×24 服务持续运行                                           |
-| Gas 仅作 `$25` 异常熔断       | `LOCAL_IMPLEMENTED`                            | `lib/trend-lp-policy.mjs`                                                                                           | 只是策略规则，不构成链上花费授权                                     |
-| 同区块仓位/nonce/面板交叉核验 | `LOCAL_IMPLEMENTED`                            | `scripts/pair-trend-shadow.mjs live-once`                                                                           | 是命令式单次/有限次数运行，不是服务                                  |
-| 全量撤仓 calldata `eth_call`  | `PARTIAL`                                      | Shadow live report                                                                                                  | 只证明撤仓 leg；撤仓 + 换币 + 重建仓位未端到端验证                   |
-| 趋势模型 API                  | `LOCAL_IMPLEMENTED`                            | `/api/trend` 与 `/api/snapshot` 返回同一 `snapshotId`、safe block 和模型版本                                        | 尚待真实本地 smoke 与生产 contract readback                          |
-| 趋势模型可视化                | `LOCAL_IMPLEMENTED`                            | 面板已绘制当前价、成交热区、活跃 LP、领先/目标区间、下一档，并显示候选锚点、资格与首项落选原因                      | 尚待桌面/手机浏览器视觉验收与状态机时间线                            |
-| 7×24 Shadow daemon            | `NOT_IMPLEMENTED`                              | 只有 bounded series 命令                                                                                            | 缺调度、持久恢复、锁、告警、运行健康检查                             |
-| 自动签名与交易                | `NOT_IMPLEMENTED` 且未授权                     | ADR 0003 明确 Shadow-only                                                                                           | 需要单独 ADR、密钥边界、金丝雀和用户授权                             |
-| 专用公开 GitHub 仓库          | `REMOTE_VERIFIED`                              | `MeiYanDong/robinhood-pair-liquidity`，public，默认分支 `main`                                                      | 私有 LP 工作区的新 Shadow 与规划文件尚未同步                         |
-| CI 质量门禁定义               | `LOCAL_IMPLEMENTED`                            | 两个工作区均有 `.github/workflows/ci.yml`                                                                           | 必须在公开仓库包含本次代码的 commit/PR 上取得 Actions 结果           |
-| 生产部署后 readback           | `PARTIAL`                                      | 当前面板有 healthz                                                                                                  | 新模型、动态仓位和新 API 尚未部署，无法回读                          |
+| 能力                          | 当前状态                   | 证据                                                                                                               | 缺口                                                                 |
+| ----------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------- |
+| 后端定时刷新市场快照          | `PROD_VERIFIED`            | 生产版每 60 秒把市场、动态 inventory 与趋势模型发布为同一 snapshotId；部署后连续读到 3 个前进的安全区块            | 采用轮询而不是流式更新                                               |
+| 前端自动轮询                  | `PROD_VERIFIED`            | 可见页面每 5 秒检查 snapshotId；生产浏览器在不 reload 的情况下自动更新区块与生成时间                               | 后端仍每 60 秒才产生新快照                                           |
+| systemd 常驻与重启            | `PROD_VERIFIED`            | `dashboard/deploy/pair-liquidity-dashboard.service`；线上 startedAt/health                                         | 只托管面板采集器，没有趋势 Shadow 服务                               |
+| 自动发现钱包全部 NFT          | `PROD_VERIFIED`            | 生产 `/api/inventory` 在安全区块核对 balance/indexed/verified=`24/24/24`，并持续推进 Transfer 游标                 | 部署后尚未自然发生新的 mint/转出，仍需下一次真实事件 readback        |
+| 自动更新 NFT 生命周期账本     | `PROD_VERIFIED`            | 生产 SQLite 已保存 24 个 state 与逐安全区块 snapshots；刷新时动态合并 manifest                                     | 自动发现仓位的资金来源先保持 `UNKNOWN_EXTERNAL_ORIGIN`，不可伪造成本 |
+| 1h/6h 成交量和方向流          | `LOCAL_IMPLEMENTED`        | `lib/trend-lp-signals.mjs`                                                                                         | 仍依赖面板已有 bins 和当前 mark 近似估值                             |
+| 成交量 + 流动性 + 份额选区间  | `PROD_VERIFIED`            | 生产 trend v3 以 1h/6h P10/P90 直接生成热区锚点，并评分热区覆盖、模拟份额、流动性稀释与宽度偏差                    | LVR、波动率和滚仓摩擦项待补                                          |
+| `$0.01` 左右目标宽度          | `PROD_VERIFIED`            | 生产候选使用 `$0.010000` 中心偏好与约 `$0.008/$0.010/$0.012/$0.015` 候选；页面同时披露 Tick 对齐后的实际宽度和偏差 | 仍需更多极端价格和 SPY/USDG 漂移回放                                 |
+| 38 个趋势场景回放             | `LOCAL_IMPLEMENTED`        | `npm run trend:scenarios`、fixture                                                                                 | 需要新增宽区间、锚价变化和连续突破场景                               |
+| 跨区间、插针过滤、跳档状态    | `LOCAL_IMPLEMENTED`        | `lib/trend-lp-sequence.mjs`                                                                                        | 尚未作为 7×24 服务持续运行                                           |
+| Gas 仅作 `$25` 异常熔断       | `LOCAL_IMPLEMENTED`        | `lib/trend-lp-policy.mjs`                                                                                          | 只是策略规则，不构成链上花费授权                                     |
+| 同区块仓位/nonce/面板交叉核验 | `LOCAL_IMPLEMENTED`        | `scripts/pair-trend-shadow.mjs live-once`                                                                          | 是命令式单次/有限次数运行，不是服务                                  |
+| 全量撤仓 calldata `eth_call`  | `PARTIAL`                  | Shadow live report                                                                                                 | 只证明撤仓 leg；撤仓 + 换币 + 重建仓位未端到端验证                   |
+| 趋势模型 API                  | `PROD_VERIFIED`            | 生产 `/api/trend` 与 `/api/snapshot` 返回同一 `snapshotId`、safe block、`pair-trend-range-v3` 和 Shadow-only 边界  | 仍不是持续状态机或交易执行器                                         |
+| 趋势模型可视化                | `PROD_VERIFIED`            | 生产面板已显示当前价、成交热区、活跃 LP、目标区间、候选锚点、资格与首项落选原因；桌面/手机及控制台均验收           | 状态机时间线仍待实现                                                 |
+| 7×24 Shadow daemon            | `NOT_IMPLEMENTED`          | 只有 bounded series 命令                                                                                           | 缺调度、持久恢复、锁、告警、运行健康检查                             |
+| 自动签名与交易                | `NOT_IMPLEMENTED` 且未授权 | ADR 0003 明确 Shadow-only                                                                                          | 需要单独 ADR、密钥边界、金丝雀和用户授权                             |
+| 专用公开 GitHub 仓库          | `REMOTE_VERIFIED`          | `MeiYanDong/robinhood-pair-liquidity`，public；PR #9 已由受保护 `main` 的 2 项必需检查门禁合并                     | 私有运行输出仍不得同步                                               |
+| CI 质量门禁定义               | `REMOTE_VERIFIED`          | Actions run `34197017567` 在本次 PR 上通过 `quality` 与 `dashboard-smoke`                                          | CI 不等于生产发布回执                                                |
+| 生产部署后 readback           | `PROD_VERIFIED`            | release `20260908T070232Z`、commit `38e30daf...`；health/inventory/trend/浏览器/文件指纹/SQLite 完整性均已回读     | 48 小时观察与下一次真实 mint/撤仓事件仍未完成                        |
 
-结论：当前本地版本已经补齐动态仓位发现、约 `$0.01` 价格域候选、统一 API 和基础模型面板；生产发布、持续 Shadow 状态机、原子执行与实盘授权仍未闭环。实现与授权是两回事，本阶段固定只读。
+结论：动态仓位发现、约 `$0.01` 价格域候选、统一 API 与模型面板已经发布到生产；持续 Shadow 状态机、原子执行与实盘授权仍未闭环。实现与授权是两回事，本阶段固定只读。
 
 ### 4.4 本次本地基线验证
 
@@ -233,21 +233,30 @@ Dashboard 自动重算并发布，浏览器按 snapshotId 更新
 - 真实本地安全区块 `57479821` 上，inventory 的 balance/indexed/verified 为 `24/24/24`；`/api/trend` 返回 v3、25 个候选和固定 `executionAuthorized=false`。
 - Playwright 已验证 1440px/390px 布局、1h/6h 交互和自动快照更新；截图只保存在忽略的本地输出目录。
 
-上述仍是本地与链上只读证据；只有目标 commit 的 CI 和生产 URL 回读完成后，才能升级为生产已发布。
+生产补充证据：PR #9 的 Actions run `34197017567` 两项必需检查均成功；合并提交
+`38e30daf31d5573252ee27c1acfbc411f6a228a0` 已安装为 release `20260908T070232Z`。生产
+`/readyz` 返回 `ready=true`，inventory 为 `VERIFIED` 且 balance/indexed/verified 为
+`24/24/24`；浏览器在不重新加载页面的情况下连续显示安全区块 `57497707`、`57498301`、
+`57498908`。这些证据足以把新版升级为生产已发布，但不替代 48 小时稳定性观察，也不能证明
+尚未发生的下一次真实 mint/撤仓事件。
 
 ### 4.5 GitHub 与本地工作区关系
 
 本项目确实已有公开 GitHub 仓库，上一版“当前目录不是 Git 仓库”的表述只描述了文件系统形态，却遗漏了项目 README 已明确记录的发布仓库，现更正如下：
 
-| 层               | 路径/地址                                           | 当前证据                                                      | 职责                            |
-| ---------------- | --------------------------------------------------- | ------------------------------------------------------------- | ------------------------------- |
-| 私有实盘工作区   | `/Users/myandong/Projects/LP`                       | 非 Git root；包含私有 `runs/` 与最新未发布 Shadow 代码        | 链上执行证据、开发与本地验证    |
-| 本地公开仓库克隆 | `/Users/myandong/Projects/robinhood-pair-liquidity` | clean `main`，HEAD `b6b05cccab8e6146fbdb4cbf543f42fb3f945210` | 审查准备、提交与发布打包        |
-| GitHub           | `MeiYanDong/robinhood-pair-liquidity`               | `PUBLIC`，默认分支 `main`，远端同一 SHA                       | 公开 source of truth 与 CI 门禁 |
+| 层               | 路径/地址                                           | 当前证据                                                        | 职责                            |
+| ---------------- | --------------------------------------------------- | --------------------------------------------------------------- | ------------------------------- |
+| 私有实盘工作区   | `/Users/myandong/Projects/LP`                       | 非 Git root；包含私有 `runs/` 与最新未发布 Shadow 代码          | 链上执行证据、开发与本地验证    |
+| 本地公开仓库克隆 | `/Users/myandong/Projects/robinhood-pair-liquidity` | 从 `origin/main` 建立证据文档分支；生产代码基线为 `38e30daf...` | 审查准备、提交与发布打包        |
+| GitHub           | `MeiYanDong/robinhood-pair-liquidity`               | `PUBLIC`，默认分支 `main`，生产代码提交 `38e30daf...`           | 公开 source of truth 与 CI 门禁 |
 
-GitHub Actions run `34081630851` 已在该 SHA 上成功完成。这证明公开仓库当前主分支基线 CI 成功，不证明私有工作区中尚未同步的 Trend Shadow 和本次文档已经通过远端 CI。
+GitHub Actions run `34197017567` 已在 PR #9 上成功完成，`quality` 与 `dashboard-smoke` 均为
+`SUCCESS`，随后由受保护分支规则合并。本次公开代码、测试、规划和 Shadow 边界已经同步；私有
+`runs/`、数据库、RPC 配置与执行材料没有进入公开仓库。
 
-当前 Dashboard 核心文件 `dashboard/server.mjs`、`dashboard/lib/collector.mjs`、`dashboard/public/app.js` 和 CI workflow 在两个本地目录一致；但 `docs/plan.md`、`docs/todo.md`、Trend Shadow modules/scripts/tests 尚只存在于私有实盘工作区。实施时应选择性同步公开安全文件到专用仓库，绝不能把整个 `/Projects/LP` 连同 `runs/` 复制或提交。
+当前 Dashboard 核心、公开安全的 Trend Shadow modules/tests、`docs/plan.md` 与 `docs/todo.md`
+已经选择性同步。`/Projects/LP` 仍保留私有运行证据，禁止把整个父目录、`runs/`、数据库或
+凭据复制到公开仓库。
 
 ## 5. 产品范围
 

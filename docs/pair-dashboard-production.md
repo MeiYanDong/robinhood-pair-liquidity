@@ -1,6 +1,6 @@
 # PAIR/SPY 公开实时面板：生产部署
 
-最后核验：2026-09-06（Asia/Shanghai；精确运行时证据见部署读回）
+最后核验：2026-09-08（Asia/Shanghai；精确运行时证据见部署读回）
 
 ## 公网入口
 
@@ -10,6 +10,8 @@
 - 实时就绪：<http://47.251.187.250/readyz>
 - 数据来源：<http://47.251.187.250/api/sources>
 - 快照：`/api/snapshot?window=cycle|1h|6h|24h|7d`
+- 动态仓位：<http://47.251.187.250/api/inventory>
+- 趋势模型：<http://47.251.187.250/api/trend>
 - 全生命周期总账：<http://47.251.187.250/api/portfolio>
 
 这是完全公开、只读的 IP 入口。目前没有绑定域名，因此没有配置 HTTPS；页面不接收登录、
@@ -68,11 +70,33 @@ RPC 端点不出现在网页、API 响应或项目日志中。服务不加载任
 - 生产依赖：14 个，仅以 `viem` 为直接依赖；部署后 `npm audit --omit=dev` 为 0 项漏洞。
 
 生产验收已覆盖：systemd/NGINX active + enabled、重启后从最后快照恢复、公开健康检查为
-`LIVE`、安全区块继续前进、schema v3 三池快照与两个候选游标追平、当前 21 个历史 NFT
-（4 活跃、17 已撤空）的 owner/liquidity 同区块读回、1 小时与 6 小时窗口交互切换、
+`LIVE`、安全区块继续前进、schema v4 三池快照与两个候选游标追平、当前 24 个历史 NFT
+（5 活跃、19 已撤空）的 owner/liquidity 同区块读回、1 小时与 6 小时窗口交互切换、
 桌面/移动端视觉检查，以及浏览器控制台 0 错误。公网 `app.js` SHA-256 与本地最终版一致；生产 `npm audit
 --omit=dev` 为 0 项漏洞。仓位 TickMath/本金公式还与原 Uniswap SDK 对 7 组区间逐 wei
 核对一致，生产服务不安装交易执行器、Hardhat、Solc 或完整 Uniswap SDK 依赖树。
+
+## 2026-09-08 自动仓位与趋势模型发布证据
+
+- GitHub：公开 PR #9，经受保护 `main` 的 `quality` 与 `dashboard-smoke` 两项必需检查合并；
+  Actions run `34197017567` 成功。
+- 生产代码：commit `38e30daf31d5573252ee27c1acfbc411f6a228a0`，release
+  `20260908T070232Z`。服务器与 GitHub 版 `dashboard/public/app.js` 的 SHA-256 均为
+  `da77120be443c00cc5508b1e5678451a9e7f7819ba0943444858a67300a35609`。
+- 可恢复性：部署前 SQLite 在线一致性备份位于
+  `/var/backups/pair-liquidity-dashboard/20260908T070119Z`，备份与部署后主库的
+  `PRAGMA integrity_check` 均为 `ok`。
+- 动态 inventory：生产安全区块上的 ERC-721 `balanceOf`、Transfer 索引持有数和逐 NFT
+  `ownerOf` 验证数均为 `24`；5 个 active、19 个 empty、0 个 owner mismatch、0 个读取失败。
+  部署后尚未发生新的 NFT Transfer，因此事件表为 0；下一次自然 mint/转出仍需事件级回读，
+  不为测试主动移动资金。
+- 自动刷新：同一浏览器页面在没有 reload、没有改 JSON/HTML 的情况下依次显示安全区块
+  `57497707`、`57498301`、`57498908`；控制台 0 error / 0 warning。
+- 趋势模型：`pair-trend-range-v3`，固定 `READ_ONLY_SHADOW` 与
+  `executionAuthorized=false`。候选由 1h/6h 成交热区、市场流动性竞争、模拟份额和约
+  `$0.01` 的价格域宽度共同决定；实际区间及偏差随安全区块变化，并非收益承诺。
+- 运行态：systemd `active/running`、PID `99683`、`NRestarts=0`；`/readyz` 返回
+  `ready=true`，inventory=`VERIFIED`，trend=`MODELLED`。
 
 2026-09-05 新增 PAIR/USDG 1% 实仓 NFT `1843215` 的安全区块读回。公网快照已核验
 owner 为执行钱包、liquidity 为 `11939644080649306`、区间 `[323400, 326900]`、当前

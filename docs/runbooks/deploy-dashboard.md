@@ -36,3 +36,16 @@
 
 GitHub Actions 只是合并门禁，不是生产发布回执。没有完成上述公网验证时，只能说代码已通过
 CI，不能说已部署。
+
+## 回滚与 SQLite 恢复
+
+应用回滚优先只切换 release，不覆盖数据库：先从备份记录读取上一 release 的绝对路径，确认
+目录与 `GIT_COMMIT` 存在，再执行 `ln -sfn <上一 release 绝对路径>
+/opt/pair-liquidity-dashboard/current` 和 `systemctl restart pair-liquidity-dashboard.service`，
+随后重新完成全部发布后验证。不得使用模糊 glob 或未解析变量作为切换目标。
+
+只有确认新 schema/写入损坏且应用回滚不足时才恢复 SQLite。停止服务后，先给现有数据库制作
+第二份故障现场副本；对目标备份运行 `PRAGMA integrity_check`，再以明确的备份绝对路径替换
+`/var/lib/pair-liquidity-dashboard/history.sqlite`，恢复 `pairdash:pairdash` 与 `0640` 权限，
+启动服务并核对 inventory 游标、钱包余额和最新安全区块。数据库恢复会丢弃备份点之后的历史，
+必须有明确故障证据和人工授权，不能作为常规应用回滚步骤。
