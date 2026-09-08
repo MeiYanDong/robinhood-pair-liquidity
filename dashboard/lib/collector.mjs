@@ -35,6 +35,7 @@ const BLOCK_FETCH_ATTEMPTS = 9
 const BLOCK_BATCH_PAUSE_MS = 600
 const RPC_READ_ATTEMPTS = 6
 const EXTERNAL_STRATEGY_SYNC_ATTEMPTS = 2
+const INVENTORY_RECONCILIATION_ATTEMPTS = 2
 const SYNC_CHUNK_PAUSE_MS = 250
 const MULTICALL3_ADDRESS = getAddress('0xcA11bde05977b3631167028862bE2a173976CA11')
 
@@ -1392,18 +1393,6 @@ export class PairDashboardCollector {
 
   async reconcilePositionInventory({ positionInventory, wallet, safeBlock, registry }) {
     const ownedTokenIds = positionInventory.ownedTokenIds(wallet)
-    const [expectedBalance, ownedStates] = await Promise.all([
-      this.client.readContract({
-        address: this.positionManager,
-        abi: POSITION_MANAGER_ABI,
-        functionName: 'balanceOf',
-        args: [wallet],
-        blockNumber: safeBlock.number,
-      }),
-      mapWithConcurrency(ownedTokenIds, Math.max(1, Math.floor(this.rpcMethodConcurrency / 3)), (tokenId) =>
-        this.readInventoryPosition(tokenId, safeBlock.number, registry, wallet),
-      ),
-    ])
     const ownedSet = new Set(ownedTokenIds)
     const previousById = new Map([
       ...positionInventory
@@ -1416,25 +1405,54 @@ export class PairDashboardCollector {
       ...previousById.keys(),
       ...positionInventory.transfers().map((transfer) => String(transfer.tokenId)),
     ])
-    const nonOwnedStates = [...allKnownIds]
-      .filter((tokenId) => !ownedSet.has(tokenId))
-      .map((tokenId) => {
-        const previous = previousById.get(tokenId) || {}
-        return {
-          ...previous,
-          tokenId,
-          owner: null,
-          liquidity: previous.liquidity ?? previous.lastKnownLiquidity ?? null,
-          status: 'owner_mismatch',
-          dataQuality: 'ownership_derived_from_canonical_transfer_events',
+    let lastError
+    for (let attempt = 0; attempt < INVENTORY_RECONCILIATION_ATTEMPTS; attempt += 1) {
+      try {
+        const [expectedBalance, ownedStates] = await Promise.all([
+          this.client.readContract({
+            address: this.positionManager,
+            abi: POSITION_MANAGER_ABI,
+            functionName: 'balanceOf',
+            args: [wallet],
+            blockNumber: safeBlock.number,
+          }),
+          mapWithConcurrency(ownedTokenIds, Math.max(1, Math.floor(this.rpcMethodConcurrency / 3)), (tokenId) =>
+            this.readInventoryPosition(tokenId, safeBlock.number, registry, wallet),
+          ),
+        ])
+        const nonOwnedStates = [...allKnownIds]
+          .filter((tokenId) => !ownedSet.has(tokenId))
+          .map((tokenId) => {
+            const previous = previousById.get(tokenId) || {}
+            return {
+              ...previous,
+              tokenId,
+              owner: null,
+              liquidity: previous.liquidity ?? previous.lastKnownLiquidity ?? null,
+              status: 'owner_mismatch',
+              dataQuality: 'ownership_derived_from_canonical_transfer_events',
+            }
+          })
+        const audit = {
+          ...inventoryAudit({ expectedBalance, ownedTokenIds, states: ownedStates, safeBlock }),
+          cursorBlock: positionInventory.cursor().toString(),
+          cursorHash: positionInventory.cursorHash(),
         }
+        const result = { states: [...ownedStates, ...nonOwnedStates], audit }
+        if (audit.status === 'VERIFIED' || attempt === INVENTORY_RECONCILIATION_ATTEMPTS - 1) return result
+      } catch (error) {
+        lastError = error
+        if (attempt === INVENTORY_RECONCILIATION_ATTEMPTS - 1) throw error
+      }
+      this.onProgress({
+        phase: 'inventory-reconciliation-retry',
+        message: `同区块 NFT 余额与逐仓对账暂时失败，正在重试`,
+        attempt: attempt + 1,
+        attempts: INVENTORY_RECONCILIATION_ATTEMPTS,
       })
-    const audit = {
-      ...inventoryAudit({ expectedBalance, ownedTokenIds, states: ownedStates, safeBlock }),
-      cursorBlock: positionInventory.cursor().toString(),
-      cursorHash: positionInventory.cursorHash(),
+      await new Promise((resolve) => setTimeout(resolve, 750 * (attempt + 1)))
     }
-    return { states: [...ownedStates, ...nonOwnedStates], audit }
+    throw lastError
   }
 
   async syncPositionInventory(safeBlock) {
