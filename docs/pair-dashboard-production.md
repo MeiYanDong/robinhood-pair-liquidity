@@ -76,6 +76,28 @@ RPC 端点不出现在网页、API 响应或项目日志中。服务不加载任
 --omit=dev` 为 0 项漏洞。仓位 TickMath/本金公式还与原 Uniswap SDK 对 7 组区间逐 wei
 核对一致，生产服务不安装交易执行器、Hardhat、Solc 或完整 Uniswap SDK 依赖树。
 
+## 2026-09-09 独立 PAIR/USDG 实盘账户投影
+
+- GitHub：功能 PR #11、窄屏与策略局部重试 PR #12、同安全区块 inventory 精确重试 PR #13
+  均经 `quality` 与 `dashboard-smoke` 门禁合并。最终运行代码 commit 为
+  `d831020339f91c93e57368073f18c8079938745b`。
+- 生产：release `/opt/pair-liquidity-dashboard/releases/20260908T164352Z`；systemd 与 Nginx
+  均为 active + enabled，`NRestarts=0`，该 release 启动后的 journal 为 0 次 refresh failure。
+- 自动发现：策略账户没有静态 NFT 清单。PositionManager Transfer 游标自动观察到
+  `#2183929 → #2193494`，生产 `/api/strategies` 在同一安全区块返回 6 个生命周期 NFT、
+  5 个当前持有、5 个逐仓验证、1 个历史 owner mismatch、0 个读取失败。
+- 自动刷新：最终版连续发布安全区块 `57842786 → 57843378 → 57843972`，每轮主库存和外部策略
+  均为 `VERIFIED`，趋势模型保持 `executionAuthorized=false`。发布前验收曾真实捕获唯一读 RPC
+  的瞬时失败，并据此把重试缩小到 NFT 余额与逐仓对账，而不是重跑整段市场历史。
+- 数据恢复：部署前完整状态备份位于
+  `/var/backups/pair-liquidity-dashboard/20260908T164350Z`；主库与
+  `strategy-inventory-pair-usdg-martingale-live-1.sqlite` 的 `PRAGMA integrity_check` 均为 `ok`。
+- 浏览器：390px 手机与 1440px 桌面均无页面级横向溢出，能显示 `#2193494` 和 5 档状态，
+  控制台 0 error / 0 warning；公网与仓库 `dashboard/public/app.js` SHA-256 均为
+  `02c155ab463ae4beb915b8ad87c1bbf5d4b71bd3d125660285b998a5c89a5b8e`。
+- 边界：公开面板仍只有一个读 RPC，不读取签名凭据、待签意图或私有 Keeper 状态；第二个独立
+  专业读节点仍是运行可靠性的未闭环项。成本基础继续显示 `UNKNOWN_NOT_IN_PUBLIC_LEDGER`。
+
 ## 2026-09-08 自动仓位与趋势模型发布证据
 
 - GitHub：公开 PR #9，经受保护 `main` 的 `quality` 与 `dashboard-smoke` 两项必需检查合并；

@@ -521,6 +521,9 @@ Story A–D 与 Story E 的生产刷新主链路已经完成。当前下一步�
       `NOT_OBSERVED_BY_DASHBOARD`，不从链上余额倒推。
 - [x] 外部策略 `PARTIAL` 独立降级，不单独阻断旧钱包 readiness。
 - [x] 增加配置路径安全、未知 pool、重复 ID、无配置 NFT 自动发现和只读边界测试。
-- [ ] GitHub CI 对本变更提交通过。
-- [ ] 发布到公网面板，核验 `/readyz`、`/api/strategies`、首页与连续至少 3 个刷新周期。
-- [ ] 为生产 `strategy-inventory-*.sqlite` 建一致性备份并核验 `PRAGMA integrity_check`。
+- [x] GitHub PR #11、#12、#13 的 `quality` 与 `dashboard-smoke` 均通过；最终运行代码 commit 为
+      `d831020339f91c93e57368073f18c8079938745b`。
+- [x] 已发布到公网面板；`/readyz`、`/api/strategies`、首页均通过，最终版连续安全区块
+      `57842786 → 57843378 → 57843972` 保持主库存与策略库存 `VERIFIED`。
+- [x] 生产主库与 `strategy-inventory-pair-usdg-martingale-live-1.sqlite` 已一致性备份到
+      `/var/backups/pair-liquidity-dashboard/20260908T164350Z`，两库 `PRAGMA integrity_check` 均为 `ok`。
