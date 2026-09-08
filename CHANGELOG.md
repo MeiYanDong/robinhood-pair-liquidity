@@ -6,6 +6,9 @@
   SQLite cursor and reorg recovery, same-safe-block principal/fee valuation, `/api/strategies`, and a live five-band UI.
 - Kept the external account's cost basis and private keeper runtime out of the public dashboard, with independent strategy
   degradation so a transient rotation cannot falsely take the original portfolio offline.
+- Retry one failed external-strategy inventory reconciliation independently before publishing a `PARTIAL` projection; a
+  second failure still degrades honestly without blocking the original portfolio.
+- Allow portfolio insight cards to shrink within narrow viewports instead of creating page-level horizontal overflow.
 - Added a persistent PositionManager NFT inventory indexer with canonical `Transfer` cursors, block-hash reorg checks, same-safe-block `balanceOf/ownerOf/liquidity/pool-info` reconciliation, and fail-closed mismatch recovery.
 - Made current PAIR/SPY and PAIR/USDG position sets derive from the runtime inventory instead of a constructor-time static manifest; newly discovered positions remain `UNKNOWN` for cost attribution until audited.
 - Replaced fixed Tick-width trend candidates with a price-domain v3 model centered around an approximately `0.010 USDG` configurable width, including `0.008/0.010/0.012/0.015` candidates, direct 1h/6h hot-zone anchors, Tick round-trip output, qualification reasons, liquidity competition, projected share, and a non-executable next band.

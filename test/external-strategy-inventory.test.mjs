@@ -124,16 +124,50 @@ test('external strategy refresh failure degrades only that strategy and redacts 
     rpcMinimumIntervalMs: 0,
   })
   const tracker = collector.externalStrategyTrackers[0]
+  let attempts = 0
   collector.syncExternalStrategyInventory = async () => {
+    attempts += 1
     throw new Error('request failed at https://credential.example/path')
   }
 
   try {
     await collector.syncExternalStrategyInventories({ number: tracker.scanFromBlock, hash: `0x${'88'.repeat(32)}` })
+    assert.equal(attempts, 2)
     assert.equal(tracker.positionInventorySnapshot.audit.status, 'PARTIAL')
     assert.equal(tracker.positionInventorySnapshot.audit.inventoryStatus, 'external_strategy_refresh_failed')
     assert.match(tracker.lastError, /\[RPC\]/u)
     assert.doesNotMatch(tracker.lastError, /credential\.example/u)
+  } finally {
+    collector.close()
+    fs.rmSync(temporaryDirectory, { force: true, recursive: true })
+  }
+})
+
+test('external strategy inventory retries one transient failure before publishing a partial state', async () => {
+  const temporaryDirectory = fs.mkdtempSync(path.join(os.tmpdir(), 'pair-external-strategy-retry-'))
+  const collector = new PairDashboardCollector({
+    configPath: CONFIG_PATH,
+    databasePath: path.join(temporaryDirectory, 'history.sqlite'),
+    rpcUrl: 'https://rpc.invalid.example',
+    rpcMinimumIntervalMs: 0,
+  })
+  const tracker = collector.externalStrategyTrackers[0]
+  let attempts = 0
+  collector.syncExternalStrategyInventory = async () => {
+    attempts += 1
+    if (attempts === 1) throw new Error('temporary RPC failure')
+    tracker.lastError = null
+    tracker.positionInventorySnapshot = {
+      states: [],
+      audit: { status: 'VERIFIED', inventoryStatus: 'verified_complete_at_safe_block' },
+    }
+  }
+
+  try {
+    await collector.syncExternalStrategyInventories({ number: tracker.scanFromBlock, hash: `0x${'89'.repeat(32)}` })
+    assert.equal(attempts, 2)
+    assert.equal(tracker.positionInventorySnapshot.audit.status, 'VERIFIED')
+    assert.equal(tracker.lastError, null)
   } finally {
     collector.close()
     fs.rmSync(temporaryDirectory, { force: true, recursive: true })
