@@ -10,6 +10,6 @@
     "start": "node --no-warnings server.mjs"
   },
   "dependencies": {
-    "viem": "2.56.3"
+    "viem": "2.57.13"
   }
 }
